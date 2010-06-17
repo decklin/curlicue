@@ -1,0 +1,67 @@
+ocurl
+=====
+
+ocurl is a simple wrapper script to invoke curl with the necessary
+headers for OAuth. Keys, tokens, and secrets are stored in text files
+as form-encoded data. To begin, you'll need one for your app:
+
+  echo -n 'oauth_consumer_key=KEY&oauth_consumer_secret=SECRET' > consumer
+
+With that, let's get a request token:
+
+  ocurl -r consumer -p 'oauth_callback=oob' -- \
+    -d '' 'https://api.twitter.com/oauth/request_token' > request_token
+
+As you can see here, -r is used to read in parameters from our text
+files and -p is used to add additional OAuth parameters (parameters
+should be percent-encoded and separated with &). The arguments after
+-- are passed along to curl and parsed to get the HTTP method and URL.
+
+Now we need to approve the app. We can build URLs with the -e option,
+which just echoes a string back to us (with parameters from the files
+read with -r filled in) instead of running curl.
+
+  ocurl -r request_token -e \
+    'https://api.twitter.com/oauth/authorize?oauth_token=$oauth_token'
+
+Visiting this URL in our browser will give us a PIN, which will in
+turn give us an access token:
+
+  ocurl -r consumer -r req_token -p "oauth_verifier=PIN" -- \
+    -d '' 'https://api.twitter.com/oauth/access_token' > access_token
+
+Note that we need to read in both the consumer and token information
+from here on. Now we can actually make an interesting request:
+
+  ocurl -r consumer -r access_token \
+    https://api.twitter.com/1/statuses/friends_timeline.xml
+
+In this case, we are not passing any options along to curl, so the --
+can be omitted.
+
+Easy Setup
+----------
+
+If you don't want to do all the above manually, you can run the script
+ocurl-setup, which will interactively walk you through the process. It
+will create files with the same names we've used here in your current
+directory.
+
+Tips
+----
+
+If you want to combine the consumer and access token files to make
+your command line shorter, you can concatenate them into one file:
+
+   paste -d '&' consumer access_token > credentials
+
+Limitations
+-----------
+
+--data-urlencode, --data-binary, and reading POST data from a file are
+not yet supported.
+
+Dependencies
+------------
+
+OpenSSL is used for HMAC-SHA1 signing and nonce generation.

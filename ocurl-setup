@@ -1,0 +1,22 @@
+#!/bin/sh
+
+request_token_url='https://api.twitter.com/oauth/request_token'
+access_token_url='https://api.twitter.com/oauth/access_token'
+authorize_url='https://api.twitter.com/oauth/authorize'
+
+read -p 'Consumer key? ' key
+read -p 'Consumer secret? ' secret
+echo -n "oauth_consumer_key=$key&oauth_consumer_secret=$secret" > consumer
+
+./ocurl -r consumer -p 'oauth_callback=oob' -- \
+    -s -d '' "$request_token_url" > request_token
+
+echo 'Load this URL to get a PIN:'
+./ocurl -r request_token -e "$authorize_url?oauth_token=\$oauth_token"
+read -p 'PIN? ' pin
+
+./ocurl -r consumer -r request_token -p "oauth_verifier=$pin" -- \
+    -s -d '' "$access_token_url" > access_token
+
+echo "OK! Now you can run:"
+echo "ocurl -r consumer -r access_token [-p OAUTH_PARAMS] [-- CURL_OPTS] URL"

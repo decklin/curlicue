@@ -1,0 +1,98 @@
+#!/bin/sh
+
+url_encode() {
+    string="$1"
+    while [ "$string" ]; do
+        case "$string" in
+            [A-Za-z0-9._~-]*) printf '%c' "$string";;
+            *) printf '%%%X' "'$string";;
+        esac
+        string="${string#?}"
+    done
+    echo
+}
+
+parse_query_string() {
+    local IFS='&'
+    for i in $2; do
+        $1 "${i%%=*}" "${i#*=}"
+    done
+}
+
+load_creds() {
+    case "$1" in
+        oauth_consumer_key) oauth_consumer_key="$2";;
+        oauth_consumer_secret) oauth_consumer_secret="$2";;
+        oauth_token) oauth_token="$2";;
+        oauth_token_secret) oauth_token_secret="$2";;
+    esac
+}
+
+echo_pair() {
+    echo "$1=$2"
+}
+
+# This is bad; it leaks the secret on the command line. The right
+# thing would be to use -passin, but it doesn't seem to affect -hmac.
+
+hmac_sha1() {
+    echo -n "$2" | openssl dgst -sha1 -hmac "$1" -binary | base64
+}
+
+quote_vals() {
+    sed 's/=\(.*\)/="\1"/'
+}
+
+join() {
+    paste -d'&' -s | sed "s/&/$1/g"
+}
+
+mk_params() {
+    for i in \
+        oauth_version="$(url_encode "1.0")" \
+        oauth_signature_method="$(url_encode "HMAC-SHA1")" \
+        oauth_timestamp="$(url_encode "$oauth_timestamp")" \
+        oauth_nonce="$(url_encode "$oauth_nonce")" \
+        oauth_consumer_key="$(url_encode "$oauth_consumer_key")" \
+        ${oauth_token:+oauth_token="$(url_encode "$oauth_token")"} \
+        $(parse_query_string echo_pair "$extra_params") \
+        $(parse_query_string echo_pair "$1")
+    do
+        echo "$i"
+    done | sort
+}
+
+method=GET
+oauth_timestamp="$(date +%s)"
+oauth_nonce="$(openssl rand -base64 12)"
+
+while getopts 'r:p:e:' OPTION; do
+    case $OPTION in
+        r) parse_query_string load_creds "$(cat "$OPTARG")";;
+        p) extra_params="$OPTARG";;
+        e) eval "echo $OPTARG"; exit 0;;
+        *) echo "Bad option: $OPTION"; exit 2;;
+    esac
+done
+shift $(($OPTIND-1))
+
+for i; do
+    case "$prev" in
+        -d|--data) url_params="$i";;
+    esac
+    case "$i" in
+        -d|--data) method=POST;;
+        http*\?*) url="${i%%\?*}"; url_params="${i#*\?}";;
+        http*) url="$i";;
+    esac
+    prev="$i"
+done
+
+params="$(mk_params "$url_params" | join '&')"
+base_string="$method&$(url_encode "$url")&$(url_encode "$params")"
+signing_key="$oauth_consumer_secret&$oauth_token_secret"
+oauth_signature="$(hmac_sha1 "$signing_key" "$base_string")"
+sig_params="oauth_signature=$(url_encode "$oauth_signature")"
+auth_header="$(mk_params "$sig_params" | quote_vals | join ', ')"
+
+curl -H "Authorization: OAuth $auth_header" "$@"
