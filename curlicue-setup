@@ -19,4 +19,4 @@ curlicue -r consumer -r request_token -p "oauth_verifier=$pin" -- \
     -s -d '' "$access_token_url" > access_token
 
 echo "OK! Now you can run:"
-echo "curlicue -r consumer -r access_token [-p OAUTH_PARAMS] [-- CURL_OPTS] URL"
+echo "curlicue -r consumer -r access_token [-- CURL_OPTS] URL"
