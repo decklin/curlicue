@@ -81,6 +81,7 @@ shift $(($OPTIND-1))
 for i; do
     case "$prev" in
         -d|--data) url_params="$i";;
+        -X) method="$i";;
     esac
     case "$i" in
         -d|--data) method=POST;;
