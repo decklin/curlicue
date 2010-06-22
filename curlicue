@@ -25,6 +25,8 @@ load_creds() {
         oauth_consumer_secret) oauth_consumer_secret="$2";;
         oauth_token) oauth_token="$2";;
         oauth_token_secret) oauth_token_secret="$2";;
+        user_id) user_id="$2";;
+        screen_name) screen_name="$2";;
     esac
 }
 
