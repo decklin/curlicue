@@ -78,6 +78,11 @@ while getopts 'r:p:e:' OPTION; do
 done
 shift $(($OPTIND-1))
 
+if [ -z "$oauth_consumer_key" -o -z "$oauth_consumer_secret" ]; then
+    echo "Couldn't load a consumer key and secret! Exiting."
+    exit 1
+fi
+
 for i; do
     case "$prev" in
         -d|--data) url_params="$i";;
