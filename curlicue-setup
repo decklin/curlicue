@@ -4,19 +4,26 @@ request_token_url='https://api.twitter.com/oauth/request_token'
 access_token_url='https://api.twitter.com/oauth/access_token'
 authorize_url='https://api.twitter.com/oauth/authorize'
 
-read -p 'Consumer key? ' key
-read -p 'Consumer secret? ' secret
-echo -n "oauth_consumer_key=$key&oauth_consumer_secret=$secret" > consumer
+consumer_tmp=$(mktemp -t curlicue_consumer.XXXXXX)
+request_token_tmp=$(mktemp -t curlicue_request_token.XXXXXX)
+access_token_tmp=$(mktemp -t curlicue_access_token.XXXXXX)
 
-curlicue -f consumer -p 'oauth_callback=oob' -- \
-    -s -d '' "$request_token_url" > request_token
+read -p 'Consumer key: ' key
+read -p 'Consumer secret: ' secret
+echo "oauth_consumer_key=$key&oauth_consumer_secret=$secret" > $consumer_tmp
 
-echo 'Load this URL to get a PIN:'
-curlicue -f request_token -e "$authorize_url?oauth_token=\$oauth_token"
-read -p 'PIN? ' pin
+curlicue -f $consumer_tmp -p 'oauth_callback=oob' -- \
+    -s -d '' "$request_token_url" > $request_token_tmp
 
-curlicue -f consumer -f request_token -p "oauth_verifier=$pin" -- \
-    -s -d '' "$access_token_url" > access_token
+echo -n 'Load this URL: '
+curlicue -f $request_token_tmp -e "$authorize_url?oauth_token=\$oauth_token"
+read -p 'Paste the PIN you got here: ' pin
+
+curlicue -f $consumer_tmp -f $request_token_tmp -p "oauth_verifier=$pin" -- \
+    -s -d '' "$access_token_url" > $access_token_tmp
+
+read -p 'Output to file: ' output
+paste -d '&' $consumer_tmp $access_token_tmp > "$output"
 
 echo "OK! Now you can run:"
-echo "curlicue -f consumer -f access_token [-- CURL_OPTS] URL"
+echo "curlicue -f $output [-- CURL_OPTS] URL"
