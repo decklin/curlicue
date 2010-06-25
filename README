@@ -34,7 +34,7 @@ Note that we need to read in both the consumer and token information
 from here on. Now we can actually make an interesting request:
 
   curlicue -r consumer -r access_token \
-    https://api.twitter.com/1/statuses/friends_timeline.xml
+    https://api.twitter.com/1/statuses/home_timeline.xml
 
 In this case, we are not passing any options along to curl, so the --
 can be omitted.
