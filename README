@@ -9,31 +9,31 @@ as form-encoded data. To begin, you'll need one for your app:
 
 With that, let's get a request token:
 
-  curlicue -r consumer -p 'oauth_callback=oob' -- \
+  curlicue -f consumer -p 'oauth_callback=oob' -- \
     -d '' 'https://api.twitter.com/oauth/request_token' > request_token
 
-As you can see here, -r is used to read in parameters from our text
+As you can see here, -f is used to read in parameters from our text
 files and -p is used to add additional OAuth parameters (parameters
 should be percent-encoded and separated with &). The arguments after
 -- are passed along to curl and parsed to get the HTTP method and URL.
 
 Now we need to approve the app. We can build URLs with the -e option,
 which just echoes a string back to us (with parameters from the files
-read with -r filled in) instead of running curl.
+read with -f filled in) instead of running curl.
 
-  curlicue -r request_token -e \
+  curlicue -f request_token -e \
     'https://api.twitter.com/oauth/authorize?oauth_token=$oauth_token'
 
 Visiting this URL in our browser will give us a PIN, which will in
 turn give us an access token:
 
-  curlicue -r consumer -r req_token -p "oauth_verifier=PIN" -- \
+  curlicue -f consumer -f req_token -p "oauth_verifier=PIN" -- \
     -d '' 'https://api.twitter.com/oauth/access_token' > access_token
 
 Note that we need to read in both the consumer and token information
 from here on. Now we can actually make an interesting request:
 
-  curlicue -r consumer -r access_token \
+  curlicue -f consumer -f access_token \
     https://api.twitter.com/1/statuses/home_timeline.xml
 
 In this case, we are not passing any options along to curl, so the --

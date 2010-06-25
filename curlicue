@@ -68,9 +68,9 @@ method=GET
 oauth_timestamp="$(date +%s)"
 oauth_nonce="$(openssl rand -base64 12)"
 
-while getopts 'r:p:e:' OPTION; do
+while getopts 'f:p:e:' OPTION; do
     case $OPTION in
-        r) parse_query_string load_creds "$(cat "$OPTARG")";;
+        f) parse_query_string load_creds "$(cat "$OPTARG")";;
         p) extra_params="$OPTARG";;
         e) eval "echo $OPTARG"; exit 0;;
         *) echo "Unknown option: $OPTION"; exit 2;;

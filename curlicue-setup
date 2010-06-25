@@ -8,15 +8,15 @@ read -p 'Consumer key? ' key
 read -p 'Consumer secret? ' secret
 echo -n "oauth_consumer_key=$key&oauth_consumer_secret=$secret" > consumer
 
-curlicue -r consumer -p 'oauth_callback=oob' -- \
+curlicue -f consumer -p 'oauth_callback=oob' -- \
     -s -d '' "$request_token_url" > request_token
 
 echo 'Load this URL to get a PIN:'
-curlicue -r request_token -e "$authorize_url?oauth_token=\$oauth_token"
+curlicue -f request_token -e "$authorize_url?oauth_token=\$oauth_token"
 read -p 'PIN? ' pin
 
-curlicue -r consumer -r request_token -p "oauth_verifier=$pin" -- \
+curlicue -f consumer -f request_token -p "oauth_verifier=$pin" -- \
     -s -d '' "$access_token_url" > access_token
 
 echo "OK! Now you can run:"
-echo "curlicue -r consumer -r access_token [-- CURL_OPTS] URL"
+echo "curlicue -f consumer -f access_token [-- CURL_OPTS] URL"
