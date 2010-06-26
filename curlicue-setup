@@ -30,5 +30,4 @@ curlicue -f $consumer_tmp -f $request_token_tmp -p "oauth_verifier=$pin" -- \
 read -p 'Output to file: ' output
 paste -d '&' $consumer_tmp $access_token_tmp > "$output"
 
-echo "OK! Now you can run:"
-echo "curlicue -f $output [-- CURL_OPTS] URL"
+echo "OK! Now you can run: curlicue -f $output [-- CURL_OPTS] URL"
