@@ -1,59 +1,88 @@
 Curlicue
 ========
 
-Curlicue is a simple wrapper script to invoke curl with the necessary
-headers for OAuth. Keys, tokens, and secrets are stored in text files
-as form-encoded data. To begin, you'll need one for your app:
+Curlicue is a small wrapper script that invokes curl with the necessary
+headers for OAuth. It should run on any POSIX-compatible shell. Keys,
+tokens, and secrets are stored in text files as form-encoded data.
 
-  echo -n 'oauth_consumer_key=KEY&oauth_consumer_secret=SECRET' > consumer
+Usage
+-----
 
-With that, let's get a request token:
+A Curlicue command looks like:
 
-  curlicue -f consumer -p 'oauth_callback=oob' -- \
-    -d '' 'https://api.twitter.com/oauth/request_token' > request_token
+    curlicue [-f FILE ...] [-p PARAMS] [-- CURL_OPTS] URL
 
-As you can see here, -f is used to read in parameters from our text
-files and -p is used to add additional OAuth parameters (parameters
-should be percent-encoded and separated with &). The arguments after
--- are passed along to curl and parsed to get the HTTP method and URL.
+OAuth credentials are read from FILE(s). Extra OAuth parameters, if any,
+are specified with -p. Parameters in files or in the arugment to -p
+should be percent-encoded and separated with &. Either -- or a URL ends
+processing of Curlicue parameters and passes the rest along to curl.
+
+Setup
+-----
+
+To perform the initial OAuth "dance", run curlicue-setup with three
+arguments: the request token URL, the user authorization URL, and the
+access token URL. For example, to authenticate with Twitter:
+
+    curlicue-setup https://api.twitter.com/oauth/request_token \
+        https://api.twitter.com/oauth/authorize \
+        https://api.twitter.com/oauth/access_token
+
+You will be prompted for the consumer key, consumer secret, and a
+filename to write the resulting credentials (consumer key, consumer
+secret, access token, and access token secret) to. When authorizing the
+request token, "?oauth_token=REQUEST_TOKEN" will be appended to the user
+authorization URL.
+
+Walkthrough
+-----------
+
+To demonstrate the authentication process in detail, let's work through
+what happens when you run curlicue-setup with Twitter.
+
+The first step in OAuth is obtaining a request token. To make that
+request, we'll need a file containing the consumer key and secret:
+
+    echo 'oauth_consumer_key=KEY&oauth_consumer_secret=SECRET' > consumer
+
+With that, let's get the token. We're not a web app, so we use the "out
+of band" callback method:
+
+    curlicue -f consumer -p 'oauth_callback=oob' -- \
+        -d '' 'https://api.twitter.com/oauth/request_token' > request_token
+
+The arguments passed along to curl are parsed to get the HTTP method and
+URL so that the request can be signed.
 
 Now we need to approve the app. We can build URLs with the -e option,
 which just echoes a string back to us (with parameters from the files
 read with -f filled in) instead of running curl.
 
-  curlicue -f request_token -e \
-    'https://api.twitter.com/oauth/authorize?oauth_token=$oauth_token'
+    curlicue -f request_token -e \
+        'https://api.twitter.com/oauth/authorize?oauth_token=$oauth_token'
 
-Visiting this URL in our browser will give us a PIN, which will in
-turn give us an access token:
+Visiting this URL in our browser and selecting "Allow" will give us a
+PIN, which we can in turn use to obtain an access token:
 
-  curlicue -f consumer -f req_token -p "oauth_verifier=PIN" -- \
-    -d '' 'https://api.twitter.com/oauth/access_token' > access_token
+    curlicue -f consumer -f req_token -p "oauth_verifier=PIN" -- \
+        -d '' 'https://api.twitter.com/oauth/access_token' > access_token
 
 Note that we need to read in both the consumer and token information
 from here on. Now we can actually make an interesting request:
 
-  curlicue -f consumer -f access_token \
-    https://api.twitter.com/1/statuses/home_timeline.xml
+    curlicue -f consumer -f access_token \
+        https://api.twitter.com/1/statuses/home_timeline.xml
 
 In this case, we are not passing any options along to curl, so the --
 can be omitted.
 
-Easy Setup
-----------
-
-If you don't want to do all the above manually, you can run the script
-curlicue-setup, which will interactively walk you through the process. It
-will create files with the same names we've used here in your current
-directory.
-
-Tips
-----
-
-If you want to combine the consumer and access token files to make
-your command line shorter, you can concatenate them into one file:
+Finally, to make our command line shorter, we can concatenate the
+consumer and token into one file:
 
    paste -d '&' consumer access_token > credentials
+
+And remove all the intermediate files (consumer, request_token, and
+access_token).
 
 Limitations
 -----------

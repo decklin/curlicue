@@ -1,8 +1,13 @@
 #!/bin/sh
 
-request_token_url='https://api.twitter.com/oauth/request_token'
-access_token_url='https://api.twitter.com/oauth/access_token'
-authorize_url='https://api.twitter.com/oauth/authorize'
+if [ $# = 3 ]; then
+    request_token_url="$1"
+    authorize_url="$2"
+    access_token_url="$3"
+else
+    echo "usage: $0 REQUEST_TOKEN_URL AUTHORIZE_URL ACCESS_TOKEN_URL"
+    exit 2
+fi
 
 consumer_tmp=$(mktemp -t curlicue_consumer.XXXXXX)
 request_token_tmp=$(mktemp -t curlicue_request_token.XXXXXX)
