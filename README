@@ -55,6 +55,8 @@ request, we'll need a file containing the consumer key and secret:
 
     echo 'oauth_consumer_key=KEY&oauth_consumer_secret=SECRET' > consumer
 
+Make sure that the values are percent-encoded.
+
 With that, let's get the token. We're not a web app, so we use the "out
 of band" callback method:
 

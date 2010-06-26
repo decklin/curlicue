@@ -1,5 +1,17 @@
 #!/bin/sh
 
+url_encode() {
+    string="$1"
+    while [ "$string" ]; do
+        case "$string" in
+            [A-Za-z0-9._~-]*) printf '%c' "$string";;
+            *) printf '%%%X' "'$string";;
+        esac
+        string="${string#?}"
+    done
+    echo
+}
+
 if [ $# = 3 ]; then
     request_token_url="$1"
     authorize_url="$2"
@@ -15,7 +27,9 @@ access_token_tmp=$(mktemp -t curlicue_access_token.XXXXXX)
 
 read -p 'Consumer key: ' key
 read -p 'Consumer secret: ' secret
-echo "oauth_consumer_key=$key&oauth_consumer_secret=$secret" > $consumer_tmp
+oack="oauth_consumer_key=$(url_encode "$key")"
+oacs="oauth_consumer_secret=$(url_encode "$secret")"
+echo "$oack&$oacs" > $consumer_tmp
 
 curlicue -f $consumer_tmp -p 'oauth_callback=oob' -- \
     -s -d '' "$request_token_url" > $request_token_tmp

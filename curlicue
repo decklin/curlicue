@@ -49,14 +49,19 @@ join() {
     paste -d'&' -s | sed "s/&/$1/g"
 }
 
+# The first four values come from this script, so they need to be
+# percent-encoded. (Never mind that e.g. "1.0" is obviously fine... some
+# day it might be "3.0~beta2".) The others are read in from form-encoded
+# files or parameters, so they should *not* be encoded again.
+
 mk_params() {
     for i in \
         oauth_version="$(url_encode "1.0")" \
         oauth_signature_method="$(url_encode "HMAC-SHA1")" \
         oauth_timestamp="$(url_encode "$oauth_timestamp")" \
         oauth_nonce="$(url_encode "$oauth_nonce")" \
-        oauth_consumer_key="$(url_encode "$oauth_consumer_key")" \
-        ${oauth_token:+oauth_token="$(url_encode "$oauth_token")"} \
+        oauth_consumer_key="$oauth_consumer_key" \
+        ${oauth_token:+oauth_token="$oauth_token"} \
         $(parse_query_string echo_pair "$extra_params") \
         $(parse_query_string echo_pair "$1")
     do
