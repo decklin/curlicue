@@ -1,0 +1,12 @@
+#!/bin/sh
+
+curlicue_key='UEMyorEm6xCJc9jDxxCw'
+key_exchange_url='http://dev.twitter.com/apps/key_exchange'
+
+echo "Load this URL: $key_exchange_url?oauth_consumer_key=$curlicue_key"
+read -p 'Paste the string you got here: ' credentials
+read -p 'Output to file: ' output
+echo "$credentials" > "$output"
+
+echo "OK! Now you can run:"
+echo "curlicue -f $output [-- CURL_OPTS] URL"

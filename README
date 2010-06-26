@@ -34,11 +34,21 @@ secret, access token, and access token secret) to. When authorizing the
 request token, "?oauth_token=REQUEST_TOKEN" will be appended to the user
 authorization URL.
 
+Twitter Setup
+-------------
+
+In the above example, you'll need to have registered an application with
+Twitter to get a consumer key and secret. Twitter also has a special
+"key exchange" process that allows you automatically create your own
+custom Curlicue entry in their application database and obtain an access
+token at the same time. To use this method, run curlicue-setup-twitter.
+
 Walkthrough
 -----------
 
 To demonstrate the authentication process in detail, let's work through
-what happens when you run curlicue-setup with Twitter.
+what happens when you run curlicue-setup with Twitter as a previously
+registered application.
 
 The first step in OAuth is obtaining a request token. To make that
 request, we'll need a file containing the consumer key and secret:
