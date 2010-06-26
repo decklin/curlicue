@@ -24,15 +24,15 @@ To perform the initial OAuth "dance", run curlicue-setup with three
 arguments: the request token URL, the user authorization URL, and the
 access token URL. For example, to authenticate with Twitter:
 
-    curlicue-setup https://api.twitter.com/oauth/request_token \
-        https://api.twitter.com/oauth/authorize \
-        https://api.twitter.com/oauth/access_token
+    curlicue-setup 'https://api.twitter.com/oauth/request_token' \
+        'https://api.twitter.com/oauth/authorize?oauth_token=$oauth_token' \
+        'https://api.twitter.com/oauth/access_token'
 
 You will be prompted for the consumer key, consumer secret, and a
 filename to write the resulting credentials (consumer key, consumer
 secret, access token, and access token secret) to. When authorizing the
-request token, "?oauth_token=REQUEST_TOKEN" will be appended to the user
-authorization URL.
+request token, variables from the token can be interpolated using shell
+syntax.
 
 Twitter Setup
 -------------

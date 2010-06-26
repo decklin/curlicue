@@ -35,7 +35,7 @@ curlicue -f $consumer_tmp -p 'oauth_callback=oob' -- \
     -s -d '' "$request_token_url" > $request_token_tmp
 
 echo -n 'Load this URL: '
-curlicue -f $request_token_tmp -e "$authorize_url?oauth_token=\$oauth_token"
+curlicue -f $request_token_tmp -e "$authorize_url"
 read -p 'Paste the PIN you got here: ' pin
 
 curlicue -f $consumer_tmp -f $request_token_tmp -p "oauth_verifier=$pin" -- \
