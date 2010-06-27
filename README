@@ -38,6 +38,9 @@ documentation. In the user authorization URL (only), variables from the
 consumer information or request token can be interpolated using shell
 syntax.
 
+For examples of how this works with several popular OAuth providers,
+refer to EXAMPLES.
+
 Twitter Setup
 -------------
 
