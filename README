@@ -120,12 +120,13 @@ Dependencies
 
 OpenSSL is used for HMAC-SHA1 signing and nonce generation.
 
-Copyright
----------
-
-See LICENSE.
-
 Thanks
 ------
 
 To Alex Payne for suggesting the name.
+
+Legal
+-----
+
+Copyright © 2010 Decklin Foster <decklin@red-bean.com>. This program is
+distributed under the MIT license; see LICENSE for details.
