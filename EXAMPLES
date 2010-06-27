@@ -73,3 +73,31 @@ Unlike the others, the token exchange is done over insecure HTTP.
 
     curlicue -f credentials \
         'http://api.netflix.com/catalog/titles'
+
+TripIt
+------
+
+In this case, the "oob" callback is not supported, but we also don't need
+a PIN, so we can fake it with an invalid URL.
+
+    curlicue-setup \
+        'https://api.tripit.com/oauth/request_token' \
+        'https://www.tripit.com/oauth/authorize?oauth_token=$oauth_token&oauth_callback=http%3A%2F%2Fnowhere.invalid%2F' \
+        'https://api.tripit.com/oauth/access_token'
+
+    curlicue -f credentials \
+        'https://api.tripit.com/v1/list/trip'
+
+Test Server
+-----------
+
+A kind soul is running this test server. No authorization needed, so
+again, leave the PIN blank.
+
+    curlicue-setup \
+        'http://term.ie/oauth/example/request_token.php' \
+        '' \
+        'http://term.ie/oauth/example/access_token.php'
+
+    curlicue -f credentials \
+        'http://term.ie/oauth/example/echo_api.php?foo=bar'
