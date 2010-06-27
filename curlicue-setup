@@ -12,12 +12,13 @@ url_encode() {
     echo
 }
 
-if [ $# = 3 ]; then
+if [ $# = 4 ]; then
     request_token_url="$1"
     authorize_url="$2"
     access_token_url="$3"
+    output_file="$4"
 else
-    echo "usage: $0 REQUEST_TOKEN_URL AUTHORIZE_URL ACCESS_TOKEN_URL"
+    echo "usage: $0 REQ_TOKEN_URL AUTHORIZE_URL ACCESS_TOKEN_URL OUTPUT_FILE"
     exit 2
 fi
 
@@ -42,7 +43,5 @@ curlicue -f $consumer_tmp -f $request_token_tmp \
     ${pin:+-p "oauth_verifier=$pin"} -- \
     -s -d '' "$access_token_url" > $access_token_tmp
 
-read -p 'Output to file: ' output
-paste -d '&' $consumer_tmp $access_token_tmp > "$output"
-
-echo "OK! Now you can run: curlicue -f $output [-- CURL_OPTS] URL"
+paste -d '&' $consumer_tmp $access_token_tmp > "$output_file"
+echo "OK! Now you can run: curlicue -f $output_file [-- CURL_OPTS] URL"

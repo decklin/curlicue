@@ -21,14 +21,16 @@ processing of Curlicue parameters and passes the rest along to curl.
 Setup
 -----
 
-To perform the initial OAuth "dance", run curlicue-setup with three
-arguments: the request token URL, the user authorization URL, and the
-access token URL. Typically, this will look something like:
+To perform the initial OAuth "dance", run curlicue-setup with four
+arguments: the request token URL, the user authorization URL, the access
+token URL, and a file to output credentials to. Typically, this will
+look something like:
 
     curlicue-setup \
         'https://oauth.provider/request_token' \
         'https://oauth.provider/authorize?oauth_token=$oauth_token' \
-        'https://oauth.provider/access_token'
+        'https://oauth.provider/access_token' \
+        credentials
 
 You will be prompted for the consumer information and a filename to
 write the resulting credentials (consumer key, consumer secret, access
@@ -48,7 +50,8 @@ Normally, you must register your consumer with your provider in order to
 get a key and secret before you can authenticate. Twitter has a special
 "key exchange" process that allows you automatically create your own
 custom Curlicue entry in their application database and obtain an access
-token at the same time. To do this, run curlicue-setup-twitter.
+token at the same time. To do this, run curlicue-setup-twitter with the
+name of a file to write credentials to as the only argument.
 
 Walkthrough
 -----------

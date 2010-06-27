@@ -2,8 +2,7 @@ Examples
 ========
 
 These examples show how to set up and then use Curlicue with various
-services. They'll assume you saved the credentials from curlicue-setup
-to a file named "credentials".
+services.
 
 Twitter
 -------
@@ -15,7 +14,8 @@ use those credentials.
     curlicue-setup \
         'https://api.twitter.com/oauth/request_token' \
         'https://api.twitter.com/oauth/authorize?oauth_token=$oauth_token' \
-        'https://api.twitter.com/oauth/access_token'
+        'https://api.twitter.com/oauth/access_token' \
+        credentials
 
     curlicue -f credentials \
         'https://api.twitter.com/1/statuses/home_timeline.xml'
@@ -34,7 +34,8 @@ must use HTTPS for all authenticated requests.
     curlicue-setup \
         'https://www.google.com/accounts/OAuthGetRequestToken?scope=https%3A%2F%2Fwww.google.com%2Fcalendar%2Ffeeds%2F' \
         'https://www.google.com/accounts/OAuthAuthorizeToken?oauth_token=$oauth_token' \
-        'https://www.google.com/accounts/OAuthGetAccessToken'
+        'https://www.google.com/accounts/OAuthGetAccessToken' \
+        credentials
 
     curlicue -f credentials \
         'https://www.google.com/calendar/feeds/default/allcalendars/full'
@@ -49,7 +50,8 @@ application I chose Delicious.
     curlicue-setup \
         'https://api.login.yahoo.com/oauth/v2/get_request_token' \
         'https://api.login.yahoo.com/oauth/v2/request_auth?oauth_token=$oauth_token' \
-        'https://api.login.yahoo.com/oauth/v2/get_token'
+        'https://api.login.yahoo.com/oauth/v2/get_token' \
+        credentials
 
     curlicue -f credentials \
         'http://api.del.icio.us/v2/posts/recent'
@@ -66,7 +68,8 @@ Unlike the others, the token exchange is done over insecure HTTP.
     curlicue-setup \
         'http://api.netflix.com/oauth/request_token' \
         'https://api-user.netflix.com/oauth/login?application_name=$application_name&oauth_consumer_key=$oauth_consumer_key&oauth_token=$oauth_token' \
-        'http://api.netflix.com/oauth/access_token'
+        'http://api.netflix.com/oauth/access_token' \
+        credentials
 
     curlicue -f credentials \
         'http://api.netflix.com/catalog/titles'
@@ -80,7 +83,8 @@ a PIN, so we can fake it with an invalid URL.
     curlicue-setup \
         'https://api.tripit.com/oauth/request_token' \
         'https://www.tripit.com/oauth/authorize?oauth_token=$oauth_token&oauth_callback=http%3A%2F%2Fnowhere.invalid%2F' \
-        'https://api.tripit.com/oauth/access_token'
+        'https://api.tripit.com/oauth/access_token' \
+        credentials
 
     curlicue -f credentials \
         'https://api.tripit.com/v1/list/trip'
@@ -94,7 +98,8 @@ again, leave the PIN blank.
     curlicue-setup \
         'http://term.ie/oauth/example/request_token.php' \
         '' \
-        'http://term.ie/oauth/example/access_token.php'
+        'http://term.ie/oauth/example/access_token.php' \
+        credentials
 
     curlicue -f credentials \
         'http://term.ie/oauth/example/echo_api.php?foo=bar'
