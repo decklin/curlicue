@@ -30,12 +30,13 @@ access token URL. Typically, this will look something like:
         'https://oauth.provider/authorize?oauth_token=$oauth_token' \
         'https://oauth.provider/access_token'
 
-You will be prompted for the consumer key, consumer secret, and a
-filename to write the resulting credentials (consumer key, consumer
-secret, access token, and access token secret) to. Your provider may
-need additional URL parameters for one or more of the steps; consult
-their documentation. For the authorization step (only), variables from
-the request token can be interpolated using shell syntax.
+You will be prompted for the consumer information and a filename to
+write the resulting credentials (consumer key, consumer secret, access
+token, and access token secret) to. Your provider may need additional
+URL parameters for one or more of the steps; consult their
+documentation. In the user authorization URL (only), variables from the
+consumer information or request token can be interpolated using shell
+syntax.
 
 Twitter Setup
 -------------

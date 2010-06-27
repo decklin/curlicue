@@ -38,7 +38,8 @@ parse_query_string() {
 }
 
 # This list is tiring, but we can't just let random files set any old
-# variable.
+# variable. The ones that don't start with oauth_ are extensions from
+# one provider or another.
 
 load_creds() {
     case "$1" in
@@ -48,6 +49,7 @@ load_creds() {
         oauth_token_secret) oauth_token_secret="$2";;
         user_id) user_id="$2";;
         screen_name) screen_name="$2";;
+        application_name) application_name="$2";;
     esac
 }
 
