@@ -8,7 +8,8 @@ tokens, and secrets are stored in text files as form-encoded data.
 Usage
 -----
 
-A Curlicue command looks like:
+A Curlicue command looks like the equivalent curl command, with some
+extra options at the beginning:
 
     curlicue [-f FILE ...] [-p PARAMS] [-- CURL_OPTS] URL
 
@@ -22,26 +23,28 @@ Setup
 
 To perform the initial OAuth "dance", run curlicue-setup with three
 arguments: the request token URL, the user authorization URL, and the
-access token URL. For example, to authenticate with Twitter:
+access token URL. Typically, this will look something like:
 
-    curlicue-setup 'https://api.twitter.com/oauth/request_token' \
-        'https://api.twitter.com/oauth/authorize?oauth_token=$oauth_token' \
-        'https://api.twitter.com/oauth/access_token'
+    curlicue-setup \
+        'https://oauth.provider/request_token' \
+        'https://oauth.provider/authorize?oauth_token=$oauth_token' \
+        'https://oauth.provider/access_token'
 
 You will be prompted for the consumer key, consumer secret, and a
 filename to write the resulting credentials (consumer key, consumer
-secret, access token, and access token secret) to. When authorizing the
-request token, variables from the token can be interpolated using shell
-syntax.
+secret, access token, and access token secret) to. Your provider may
+need additional URL parameters for one or more of the steps; consult
+their documentation. For the authorization step (only), variables from
+the request token can be interpolated using shell syntax.
 
 Twitter Setup
 -------------
 
-In the above example, you'll need to have registered an application with
-Twitter to get a consumer key and secret. Twitter also has a special
+Normally, you must register your consumer with your provider in order to
+get a key and secret before you can authenticate. Twitter has a special
 "key exchange" process that allows you automatically create your own
 custom Curlicue entry in their application database and obtain an access
-token at the same time. To use this method, run curlicue-setup-twitter.
+token at the same time. To do this, run curlicue-setup-twitter.
 
 Walkthrough
 -----------
@@ -76,7 +79,7 @@ read with -f filled in) instead of running curl.
 Visiting this URL in our browser and selecting "Allow" will give us a
 PIN, which we can in turn use to obtain an access token:
 
-    curlicue -f consumer -f req_token -p "oauth_verifier=PIN" -- \
+    curlicue -f consumer -f req_token -p 'oauth_verifier=PIN' -- \
         -d '' 'https://api.twitter.com/oauth/access_token' > access_token
 
 Note that we need to read in both the consumer and token information
