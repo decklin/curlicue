@@ -46,16 +46,13 @@ When setting up your application on Yahoo Developer Network, you need to
 chose at least one service that requires read/write access. For my test
 application I chose Delicious.
 
-FIXME: This doesn't work. We can get the access token without a problem,
-but the Delicious API says "signature invalid".
-
     curlicue-setup \
         'https://api.login.yahoo.com/oauth/v2/get_request_token' \
         'https://api.login.yahoo.com/oauth/v2/request_auth?oauth_token=$oauth_token' \
         'https://api.login.yahoo.com/oauth/v2/get_token'
 
     curlicue -f credentials \
-        'https://api.del.icio.us/v2/posts/recent'
+        'http://api.del.icio.us/v2/posts/recent'
 
 Netflix
 -------
