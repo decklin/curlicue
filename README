@@ -107,6 +107,11 @@ Dependencies
 
 OpenSSL is used for HMAC-SHA1 signing and nonce generation.
 
+Copyright
+---------
+
+See LICENSE.
+
 Thanks
 ------
 

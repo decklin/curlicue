@@ -1,5 +1,20 @@
 #!/bin/sh
 
+# Curlicue - an OAuth wrapper for curl
+#
+# Copyright © 2010 Decklin Foster <decklin@red-bean.com>
+# Please see README for usage information and LICENSE for license.
+
+# General notes:
+#
+# Because HTTP responses from the OAuth "dance" will be percent-encoded,
+# we will require that all external data supplied by the the user must
+# also be percent-encoded. Then we just treat everything as opaque,
+# encoded strings. Annoying, perhaps, but we can retain some measure of
+# sanity.
+
+# There is no url_decode (see above).
+
 url_encode() {
     string="$1"
     while [ "$string" ]; do
@@ -12,12 +27,18 @@ url_encode() {
     echo
 }
 
+# This doesn't actually *decode* anything. Arguably it should. $1 is the
+# name of another function that processes each pair (as two args).
+
 parse_query_string() {
     local IFS='&'
     for i in $2; do
         $1 "${i%%=*}" "${i#*=}"
     done
 }
+
+# This list is tiring, but we can't just let random files set any old
+# variable.
 
 load_creds() {
     case "$1" in
@@ -88,6 +109,9 @@ if [ -z "$oauth_consumer_key" -o -z "$oauth_consumer_secret" ]; then
     exit 1
 fi
 
+# The remaining args in $@ go directly to curl. Fools that we are, we
+# attempt to parse them here. Only one URL is supported.
+
 for i; do
     case "$prev" in
         -d|--data) url_params="$i";;
@@ -100,6 +124,8 @@ for i; do
     esac
     prev="$i"
 done
+
+# This is where the magic happens.
 
 params="$(mk_params "$url_params" | join '&')"
 base_string="$method&$(url_encode "$url")&$(url_encode "$params")"
