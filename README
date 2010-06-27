@@ -18,6 +18,9 @@ are specified with -p. Parameters in files or in the arugment to -p
 should be percent-encoded and separated with &. Either -- or a URL ends
 processing of Curlicue parameters and passes the rest along to curl.
 
+If you don't specify any FILEs, Curlicue will try to read credentials
+from ~/.curlicue/HOST, where HOST is the hostname component of your URL.
+
 Setup
 -----
 

@@ -99,18 +99,13 @@ oauth_nonce="$(openssl rand -base64 12)"
 while getopts 'e:f:p:u:' OPTION; do
     case $OPTION in
         e) eval "echo \"$OPTARG\""; exit 0;;
-        f) parse_query_string load_creds "$(cat "$OPTARG")";;
+        f) parse_query_string load_creds "$(cat "$OPTARG")"; loaded=1;;
         p) extra_params="$OPTARG";;
         u) echo "$(url_encode "$OPTARG")"; exit 0;;
         *) echo "Unknown option: $OPTION"; exit 2;;
     esac
 done
 shift $(($OPTIND-1))
-
-if [ -z "$oauth_consumer_key" -o -z "$oauth_consumer_secret" ]; then
-    echo "Couldn't load a consumer key and secret! Exiting."
-    exit 1
-fi
 
 # The remaining args in $@ go directly to curl. Fools that we are, we
 # attempt to parse them here. Only one URL is supported.
@@ -127,6 +122,17 @@ for i; do
     esac
     prev="$i"
 done
+
+if [ -z "$loaded" ]; then
+    cropped_url="${url#*://}"
+    host="${cropped_url%%/*}"
+    parse_query_string load_creds "$(cat "$HOME/.curlicue/$host")"
+fi
+
+if [ -z "$oauth_consumer_key" ]; then
+    echo "Couldn't load a consumer key! Exiting."
+    exit 1
+fi
 
 # This is where the magic happens.
 
