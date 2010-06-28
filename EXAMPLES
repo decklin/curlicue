@@ -89,6 +89,20 @@ a PIN, so we can fake it with an invalid URL.
     curlicue -f credentials \
         'https://api.tripit.com/v1/list/trip'
 
+Vimeo
+-----
+
+This one is pretty straightforward.
+
+    curlicue-setup \
+        'http://vimeo.com/oauth/request_token' \
+        'http://vimeo.com/oauth/authorize?oauth_token=$oauth_token&permission=read' \
+        'http://vimeo.com/oauth/access_token' \
+        credentials
+
+    curlicue -f credentials \
+        'http://vimeo.com/api/rest/v2/?method=vimeo.channels.getAll'
+
 Test Server
 -----------
 
