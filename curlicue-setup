@@ -1,5 +1,7 @@
 #!/bin/sh
 
+umask 077
+
 if [ $# = 4 ]; then
     request_token_url="$1"
     authorize_url="$2"

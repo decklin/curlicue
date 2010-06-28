@@ -72,7 +72,10 @@ registered application.
 The first step in OAuth is obtaining a request token. To make that
 request, we'll need a file containing the consumer key and secret:
 
-    echo 'oauth_consumer_key=KEY&oauth_consumer_secret=SECRET' > consumer
+    umask 077
+    cat << EOF > consumer
+    oauth_consumer_key=KEY&oauth_consumer_secret=SECRET
+    EOF
 
 Make sure that the values are percent-encoded.
 
