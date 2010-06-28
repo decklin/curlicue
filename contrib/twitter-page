@@ -1,0 +1,92 @@
+#!/bin/sh
+
+# twitter-page - list anything that Twitter lets you iterate with a cursor
+#
+# Usage:
+#     twitter-page [-f CREDS] [-u USER] ENDPOINT [FIELDS]
+#
+# where ENDPOINT is one of:
+#     friends
+#     followers
+#     lists
+#     memberships
+#     subscriptions
+#     members LIST
+#     subscribers LIST
+#     incoming
+#     outgoing
+#
+# CREDS are passed to curlicue, and FIELDS are whatever is available in
+# the appropriate elements of the XML response. USER specifies another
+# user to look at, for list endpoints only (we can't get someone else's
+# following details, just the user IDs).
+#
+# Copyright © 2010 Decklin Foster <decklin@red-bean.com>; distributed
+# under the same license as Curlicue.
+
+sep="@@@@"
+
+# This is pretty horrible. xmlstarlet won't let us output a tab
+# character (it's XML, whitespace is whitespace is whitespace), so we
+# have to make up something that we *hope* will never actually occur in
+# the input and transform it back to a tab at the end. Also, it can't
+# have any shell metacharacters since we don't quote the output of tmpl.
+
+page() {
+    cursor=-1
+    url="$1"; shift
+    while [ "$cursor" -a "$cursor" != 0 ]; do
+        temp=$(mktemp -t twitter-page.XXXXXX)
+        until file $temp | grep -q XML; do
+            curlicue -f "$creds" -- -s "$url?cursor=$cursor" > $temp
+        done
+        xmlstarlet sel -t "$@" -n $temp
+        cursor=$(xmlstarlet sel -T -t -v //next_cursor $temp)
+        rm $temp
+    done | sed "/^$/d;s/$sep/\t/g"
+}
+
+tmpl() {
+    for i; do echo "-o $sep"; echo "-v $i"; done | sed 1d
+}
+
+while getopts 'f:u:' OPTION; do
+    case $OPTION in
+        f) creds="$OPTARG";;
+        u) user="$OPTARG";;
+        *) echo "Unknown option: $OPTION"; exit 2;;
+    esac
+done
+shift $(($OPTIND-1))
+
+creds="${creds:-$HOME/.curlicue/api.twitter.com}"
+user="${user:-$(curlicue -f "$creds" -e '$screen_name')}"
+
+endpoint="$1"; shift
+case "$endpoint" in
+    friends|followers)
+        page "http://api.twitter.com/1/statuses/$endpoint.xml" \
+            -m //user $(tmpl ${@:-id screen_name})
+        ;;
+    lists)
+        page "http://api.twitter.com/1/$user/$endpoint.xml" \
+            -m //list $(tmpl ${@:-id name})
+        ;;
+    memberships|subscriptions)
+        page "http://api.twitter.com/1/$user/lists/$endpoint.xml" \
+            -m //list $(tmpl ${@:-id full_name})
+        ;;
+    members|subscribers)
+        list="$1"; shift
+        page "http://api.twitter.com/1/$user/$list/$endpoint.xml" \
+            -m //user $(tmpl ${@:-id screen_name})
+        ;;
+    incoming|outgoing)
+        page "http://api.twitter.com/1/friendships/$endpoint.xml" \
+            -m //user $(tmpl ${@:-id screen_name})
+        ;;
+    *)
+        echo "Sorry, $endpoint not supported yet."
+        exit 1
+        ;;
+esac

@@ -56,6 +56,12 @@ custom Curlicue entry in their application database and obtain an access
 token at the same time. To do this, run curlicue-setup-twitter with the
 name of a file to write credentials to as the only argument.
 
+Included Scripts
+----------------
+
+The contrib directory contains some scripts that demonstrate what you can
+do with curlicue. twitter-page requires XMLStarlet.
+
 Walkthrough
 -----------
 
