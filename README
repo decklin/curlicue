@@ -35,13 +35,11 @@ look something like:
         'https://oauth.provider/access_token' \
         credentials
 
-You will be prompted for the consumer information and a filename to
-write the resulting credentials (consumer key, consumer secret, access
-token, and access token secret) to. Your provider may need additional
-URL parameters for one or more of the steps; consult their
-documentation. In the user authorization URL (only), variables from the
-consumer information or request token can be interpolated using shell
-syntax.
+In the user authorization URL (only), variables from the consumer
+information or request token can be interpolated using shell syntax.
+Your provider may need additional URL parameters for one or more of the
+steps; consult their documentation. You will be prompted for the
+consumer key and secret.
 
 For examples of how this works with several popular OAuth providers,
 refer to EXAMPLES.
