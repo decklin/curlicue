@@ -41,7 +41,7 @@ page() {
             curlicue -f "$creds" -- -s "$url?cursor=$cursor" > $temp
         done
         xmlstarlet sel -t "$@" -n $temp
-        cursor=$(xmlstarlet sel -T -t -v //next_cursor $temp)
+        cursor=$(xmlstarlet sel -t -v //next_cursor $temp)
         rm $temp
     done | sed "/^$/d;s/$sep/\t/g"
 }
