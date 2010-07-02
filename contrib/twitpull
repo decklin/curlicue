@@ -15,6 +15,19 @@
 #     subscribers LIST
 #     incoming
 #     outgoing
+# or:
+#     public_timeline
+#     home_timeline
+#     user_timeline
+#     mentions
+#     retweeted_by_me
+#     retweeted_to_me
+#     retweets_of_me
+#     retweeted_by STATUS_ID
+#     favorites
+#
+# The first set will be fetched in full (cursors are supported); for the
+# second set, only one page will be returned at a time.
 #
 # CREDS are passed to curlicue, and FIELDS are whatever is available in
 # the appropriate elements of the XML response. USER specifies another
@@ -24,7 +37,7 @@
 # Copyright © 2010 Decklin Foster <decklin@red-bean.com>; distributed
 # under the same license as Curlicue.
 
-sep="@@@@"
+API_ROOT="http://api.twitter.com/1"
 
 # This is pretty horrible. xmlstarlet won't let us output a tab
 # character (it's XML, whitespace is whitespace is whitespace), so we
@@ -32,18 +45,30 @@ sep="@@@@"
 # the input and transform it back to a tab at the end. Also, it can't
 # have any shell metacharacters since we don't quote the output of tmpl.
 
-page() {
+sep="@@@@"
+
+multi_page() {
+    url="$API_ROOT$1"; shift
+    params="$1"; shift
     cursor=-1
-    url="$1"; shift
     while [ "$cursor" -a "$cursor" != 0 ]; do
         temp=$(mktemp -t twitpull.XXXXXX)
         until file $temp | grep -q XML; do
-            curlicue -f "$creds" -- -s "$url?cursor=$cursor" > $temp
+            curlicue -f "$creds" -- \
+                -s "$url?cursor=$cursor${params:+&$params}" | tee $temp
         done
         xmlstarlet sel -t "$@" -n $temp
         cursor=$(xmlstarlet sel -t -v //next_cursor $temp)
         rm $temp
     done | sed "/^$/d;s/$sep/\t/g"
+}
+
+single_page() {
+    url="$API_ROOT$1"; shift
+    params="$1"; shift
+    curlicue -f "$creds" -- -s "$url${params:+?$params}" \
+        | xmlstarlet sel -t "$@" -n $temp \
+        | sed "/^$/d;s/$sep/\t/g"
 }
 
 tmpl() {
@@ -62,28 +87,50 @@ shift $(($OPTIND-1))
 creds="${creds:-$HOME/.curlicue/api.twitter.com}"
 user="${user:-$(curlicue -f "$creds" -e '$screen_name')}"
 
-endpoint="$1"; shift
+case "$1" in
+    *\?*) endpoint="${1%%\?*}"; params="${1#*\?}";;
+    *) endpoint="$1";;
+esac
+shift
+
 case "$endpoint" in
     friends|followers)
-        page "http://api.twitter.com/1/statuses/$endpoint.xml" \
+        multi_page "/statuses/$endpoint.xml" "$params" \
             -m //user $(tmpl ${@:-id screen_name})
         ;;
     lists)
-        page "http://api.twitter.com/1/$user/$endpoint.xml" \
+        multi_page "/$user/$endpoint.xml" "$params" \
             -m //list $(tmpl ${@:-id name})
         ;;
     memberships|subscriptions)
-        page "http://api.twitter.com/1/$user/lists/$endpoint.xml" \
+        multi_page "/$user/lists/$endpoint.xml" "$params" \
             -m //list $(tmpl ${@:-id full_name})
         ;;
     members|subscribers)
         list="$1"; shift
-        page "http://api.twitter.com/1/$user/$list/$endpoint.xml" \
+        multi_page "/$user/$list/$endpoint.xml" "$params" \
             -m //user $(tmpl ${@:-id screen_name})
         ;;
     incoming|outgoing)
-        page "http://api.twitter.com/1/friendships/$endpoint.xml" \
+        multi_page "/friendships/$endpoint.xml" "$params" \
             -m //user $(tmpl ${@:-id screen_name})
+        ;;
+    public_timeline|home_timeline|user_timeline|mentions)
+        single_page "/statuses/$endpoint.xml" "$params" \
+            -m //status $(tmpl ${@:-id text})
+        ;;
+    retweeted_by_me|retweeted_to_me|retweets_of_me)
+        single_page "/statuses/$endpoint.xml" "$params" \
+            -m //status $(tmpl ${@:-id text})
+        ;;
+    retweeted_by)
+        id="$1"; shift
+        single_page "/statuses/$id/$endpoint.xml" "$params" \
+            -m //user $(tmpl ${@:-screen_name created_at})
+        ;;
+    favorites)
+        single_page "/$endpoint.xml" "$params" \
+            -m //status $(tmpl ${@:-user/screen_name text})
         ;;
     *)
         echo "Sorry, $endpoint not supported yet."
