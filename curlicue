@@ -96,12 +96,13 @@ method=GET
 oauth_timestamp="$(date +%s)"
 oauth_nonce="$(openssl rand -base64 12)"
 
-while getopts 'e:f:p:u:' OPTION; do
+while getopts 'e:f:p:vu:' OPTION; do
     case $OPTION in
         e) eval "echo \"$OPTARG\""; exit 0;;
         f) parse_query_string load_creds "$(cat "$OPTARG")"; loaded=1;;
         p) extra_params="$OPTARG";;
         u) echo "$(url_encode "$OPTARG")"; exit 0;;
+        v) verbose=1;;
         *) echo "Unknown option: $OPTION"; exit 2;;
     esac
 done
@@ -142,5 +143,9 @@ signing_key="$oauth_consumer_secret&$oauth_token_secret"
 oauth_signature="$(hmac_sha1 "$signing_key" "$base_string")"
 sig_params="oauth_signature=$(url_encode "$oauth_signature")"
 auth_header="$(mk_params "$sig_params" | quote_vals | join ', ')"
+
+if [ "$verbose" ]; then
+    echo "Base string: $base_string" 1>&2
+fi
 
 curl -H "Authorization: OAuth $auth_header" "$@"
