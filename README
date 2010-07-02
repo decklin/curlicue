@@ -58,7 +58,12 @@ Included Scripts
 ----------------
 
 The contrib directory contains some scripts that demonstrate what you can
-do with Curlicue. twitter-page requires XMLStarlet.
+do with Curlicue:
+
+   * twitpull - display data from various Twitter API endpoints as plain
+     text, using XMLStarlet. For endpoints that support it, handles
+     using a cursor parameter to fetch the entirety of long lists with
+     multiple requests.
 
 Walkthrough
 -----------

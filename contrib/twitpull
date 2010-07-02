@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# twitter-page - list anything that Twitter lets you iterate with a cursor
+# twitpull - list anything that Twitter lets you iterate with a cursor
 #
 # Usage:
-#     twitter-page [-f CREDS] [-u USER] ENDPOINT [FIELDS]
+#     twitpull [-f CREDS] [-u USER] ENDPOINT [FIELDS]
 #
 # where ENDPOINT is one of:
 #     friends
@@ -36,7 +36,7 @@ page() {
     cursor=-1
     url="$1"; shift
     while [ "$cursor" -a "$cursor" != 0 ]; do
-        temp=$(mktemp -t twitter-page.XXXXXX)
+        temp=$(mktemp -t twitpull.XXXXXX)
         until file $temp | grep -q XML; do
             curlicue -f "$creds" -- -s "$url?cursor=$cursor" > $temp
         done
