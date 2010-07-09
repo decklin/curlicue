@@ -55,7 +55,7 @@ multi_page() {
         temp=$(mktemp -t twitpull.XXXXXX)
         until file $temp | grep -q XML; do
             curlicue -f "$creds" -- \
-                -s "$url?cursor=$cursor${params:+&$params}" | tee $temp
+                -s "$url?cursor=$cursor${params:+&$params}" > $temp
         done
         xmlstarlet sel -t "$@" -n $temp
         cursor=$(xmlstarlet sel -t -v //next_cursor $temp)
