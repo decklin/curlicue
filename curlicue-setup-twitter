@@ -4,6 +4,7 @@ umask 077
 
 curlicue_key='UEMyorEm6xCJc9jDxxCw'
 key_exchange_url='http://dev.twitter.com/apps/key_exchange'
+unabbr_script='s/ck=/oauth_consumer_key=/;s/cs=/oauth_consumer_secret=/;s/at=/oauth_token=/;s/ats=/oauth_token_secret=/'
 
 if [ $# = 1 ]; then
     output_file="$1"
@@ -14,5 +15,5 @@ fi
 
 echo "Load this URL: $key_exchange_url?oauth_consumer_key=$curlicue_key"
 read -p 'Paste the string you got here: ' credentials
-echo "$credentials" > "$output_file"
+echo "$credentials" | sed "$unabbr_script" > "$output_file"
 echo "OK! Now you can run: curlicue -f $output_file [-- CURL_OPTS] URL"
