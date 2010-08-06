@@ -44,16 +44,6 @@ consumer key and secret.
 For examples of how this works with several popular OAuth providers,
 refer to EXAMPLES.
 
-Twitter Setup
--------------
-
-Normally, you must register your consumer with your provider in order to
-get a key and secret before you can authenticate. Twitter has a special
-"key exchange" process that allows you automatically create your own
-custom Curlicue entry in their application database and obtain an access
-token at the same time. To do this, run curlicue-setup-twitter with the
-name of a file to write credentials to as the only argument.
-
 Included Scripts
 ----------------
 

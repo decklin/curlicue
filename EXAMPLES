@@ -7,9 +7,10 @@ services.
 Twitter
 -------
 
-This is for authenticating as your own app. For testing things unrelated
-to any one particular app, it's better to run curlicue-setup-twitter and
-use those credentials.
+This is for authenticating as your own app (generating a personalized
+Curlicue consumer key with the "open source" key exchange mechanism has
+been delayed indefinitely, so I have removed the separate setup script
+for it).
 
     curlicue-setup \
         'https://api.twitter.com/oauth/request_token' \
