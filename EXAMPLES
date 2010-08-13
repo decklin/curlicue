@@ -45,7 +45,7 @@ Yahoo
 -----
 
 When setting up your application on Yahoo Developer Network, you need to
-chose at least one service that requires read/write access. For my test
+choose at least one service that requires read/write access. For my test
 application I chose Delicious.
 
     curlicue-setup \
