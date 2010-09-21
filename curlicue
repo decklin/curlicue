@@ -146,6 +146,7 @@ auth_header="$(mk_params "$sig_params" | quote_vals | join ', ')"
 
 if [ "$verbose" ]; then
     echo "Base string: $base_string" 1>&2
+    echo "Authorization: OAuth $auth_header" 1>&2
 fi
 
 curl -H "Authorization: OAuth $auth_header" "$@"
