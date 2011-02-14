@@ -59,7 +59,7 @@ multi_page() {
     while [ -n "$cursor" -a "$cursor" != 0 ]; do
         temp=$(mktemp -t twitpull.XXXXXX)
         curlicue -f "$creds" -- \
-            -s "$url?cursor=$cursor${params:+&$params}" > $temp
+            -s "$url?cursor=$cursor${params:+&$params}" > $temp || break
         xmlstarlet sel -t "$@" -n $temp
         cursor=$(xmlstarlet sel -t -v //next_cursor $temp)
         rm $temp
