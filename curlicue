@@ -131,7 +131,7 @@ if [ -z "$loaded" ]; then
 fi
 
 if [ -z "$oauth_consumer_key" ]; then
-    echo "Couldn't load a consumer key! Exiting."
+    echo "Couldn't load a consumer key! Exiting." 1>&2
     exit 1
 fi
 
