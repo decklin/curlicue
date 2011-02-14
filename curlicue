@@ -53,6 +53,10 @@ load_creds() {
     esac
 }
 
+parse_creds_from_file() {
+    parse_query_string load_creds "$(cat "$1" 2>/dev/null)"
+}
+
 echo_pair() {
     echo "$1=$2"
 }
@@ -99,7 +103,7 @@ oauth_nonce="$(openssl rand -base64 12)"
 while getopts 'e:f:p:vu:' OPTION; do
     case $OPTION in
         e) eval "echo \"$OPTARG\""; exit 0;;
-        f) parse_query_string load_creds "$(cat "$OPTARG")"; loaded=1;;
+        f) parse_creds_from_file "$OPTARG"; loaded=1;;
         p) extra_params="$OPTARG";;
         u) echo "$(url_encode "$OPTARG")"; exit 0;;
         v) verbose=1;;
@@ -127,7 +131,7 @@ done
 if [ -z "$loaded" ]; then
     cropped_url="${url#*://}"
     host="${cropped_url%%/*}"
-    parse_query_string load_creds "$(cat "$HOME/.curlicue/$host")"
+    parse_creds_from_file "$HOME/.curlicue/$host"
 fi
 
 if [ -z "$oauth_consumer_key" ]; then
