@@ -72,7 +72,7 @@ single_page() {
     url="$API_ROOT$1"; shift
     params="$1"; shift
     curlicue -f "$creds" -- -s "$url${params:+?$params}" \
-        | xmlstarlet sel -t "$@" -n $temp \
+        | xmlstarlet sel -t "$@" -n \
         | unsep
 }
 
