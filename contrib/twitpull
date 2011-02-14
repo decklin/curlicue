@@ -46,12 +46,17 @@ API_ROOT="http://api.twitter.com/1"
 # have any shell metacharacters since we don't quote the output of tmpl.
 
 sep="@@@@"
+tab="$(printf '\t')"
+
+unsep() {
+    sed "/^$/d;s/$sep/$tab/g"
+}
 
 multi_page() {
     url="$API_ROOT$1"; shift
     params="$1"; shift
     cursor=-1
-    while [ "$cursor" -a "$cursor" != 0 ]; do
+    while [ -n "$cursor" -a "$cursor" != 0 ]; do
         temp=$(mktemp -t twitpull.XXXXXX)
         until file $temp | grep -q XML; do
             curlicue -f "$creds" -- \
@@ -60,7 +65,7 @@ multi_page() {
         xmlstarlet sel -t "$@" -n $temp
         cursor=$(xmlstarlet sel -t -v //next_cursor $temp)
         rm $temp
-    done | sed "/^$/d;s/$sep/\t/g"
+    done | unsep
 }
 
 single_page() {
@@ -68,7 +73,7 @@ single_page() {
     params="$1"; shift
     curlicue -f "$creds" -- -s "$url${params:+?$params}" \
         | xmlstarlet sel -t "$@" -n $temp \
-        | sed "/^$/d;s/$sep/\t/g"
+        | unsep
 }
 
 tmpl() {

@@ -69,7 +69,7 @@ quote_vals() {
 }
 
 join() {
-    paste -d'&' -s | sed "s/&/$1/g"
+    paste -s -d '&' - | sed "s/&/$1/g"
 }
 
 # The first four values come from this script, so they need to be
