@@ -65,7 +65,7 @@ echo_pair() {
 # thing would be to use -passin, but it doesn't seem to affect -hmac.
 
 hmac_sha1() {
-    echo -n "$2" | openssl dgst -sha1 -hmac "$1" -binary | openssl base64
+    printf '%s' "$2" | openssl dgst -sha1 -hmac "$1" -binary | openssl base64
 }
 
 quote_vals() {
