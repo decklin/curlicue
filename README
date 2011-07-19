@@ -14,7 +14,7 @@ extra options at the beginning:
     curlicue [-f FILE ...] [-p PARAMS] [-- CURL_OPTS] URL
 
 OAuth credentials are read from FILE(s). Extra OAuth parameters, if any,
-are specified with -p. Parameters in files or in the arugment to -p
+are specified with -p. Parameters in files or in the argument to -p
 should be percent-encoded and separated with &. Either -- or a URL ends
 processing of Curlicue parameters and passes the rest along to curl.
 
