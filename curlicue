@@ -5,15 +5,40 @@
 # Copyright © 2010 Decklin Foster <decklin@red-bean.com>
 # Please see README for usage information and LICENSE for license.
 
-# General notes:
-#
 # Because HTTP responses from the OAuth "dance" will be percent-encoded,
-# we will require that all external data supplied by the the user must
-# also be percent-encoded. Then we just treat everything as opaque,
-# encoded strings. Annoying, perhaps, but we can retain some measure of
-# sanity.
+# and we want to round-trip this data, we require that credentials files
+# are also percent-encoded. Therefore, no decoding is done here. $1 is
+# the name of another function that processes each pair (as two args).
 
-# There is no url_decode (see above).
+load_cred_file() {
+    foreach_query_pair parse_cred "$(cat "$1" 2>/dev/null)"
+}
+
+foreach_query_pair() {
+    local IFS='&'
+    for i in $2; do
+        $1 "${i%%=*}" "${i#*=}"
+    done
+}
+
+# This list is tiring, but we can't just let random files set any old
+# variable. The ones that don't start with oauth_ are extensions from
+# one provider or another.
+
+parse_cred() {
+    case "$1" in
+        oauth_consumer_key) oauth_consumer_key="$2";;
+        oauth_consumer_secret) oauth_consumer_secret="$2";;
+        oauth_token) oauth_token="$2";;
+        oauth_token_secret) oauth_token_secret="$2";;
+        user_id) user_id="$2";;
+        screen_name) screen_name="$2";;
+        application_name) application_name="$2";;
+    esac
+}
+
+# This is incredibly inefficient if printf is not a builtin. I'm not
+# sure if there's a good way to do it without passing the buck.
 
 url_encode() {
     string="$1"
@@ -27,52 +52,15 @@ url_encode() {
     echo
 }
 
-# This doesn't actually *decode* anything. Arguably it should. $1 is the
-# name of another function that processes each pair (as two args).
-
-parse_query_string() {
-    local IFS='&'
-    for i in $2; do
-        $1 "${i%%=*}" "${i#*=}"
-    done
-}
-
-# This list is tiring, but we can't just let random files set any old
-# variable. The ones that don't start with oauth_ are extensions from
-# one provider or another.
-
-load_creds() {
-    case "$1" in
-        oauth_consumer_key) oauth_consumer_key="$2";;
-        oauth_consumer_secret) oauth_consumer_secret="$2";;
-        oauth_token) oauth_token="$2";;
-        oauth_token_secret) oauth_token_secret="$2";;
-        user_id) user_id="$2";;
-        screen_name) screen_name="$2";;
-        application_name) application_name="$2";;
-    esac
-}
-
-parse_creds_from_file() {
-    parse_query_string load_creds "$(cat "$1" 2>/dev/null)"
+quote_vals() {
+    sed 's/=\(.*\)/="\1"/'
 }
 
 echo_pair() {
     echo "$1=$2"
 }
 
-# This is bad; it leaks the secret on the command line. The right
-# thing would be to use -passin, but it doesn't seem to affect -hmac.
-
-hmac_sha1() {
-    printf '%s' "$2" | openssl dgst -sha1 -hmac "$1" -binary | openssl base64
-}
-
-quote_vals() {
-    sed 's/=\(.*\)/="\1"/'
-}
-
-join() {
+join_params() {
     paste -s -d '&' - | sed "s/&/$1/g"
 }
 
@@ -89,12 +77,21 @@ mk_params() {
         oauth_nonce="$(url_encode "$oauth_nonce")" \
         oauth_consumer_key="$oauth_consumer_key" \
         ${oauth_token:+oauth_token="$oauth_token"} \
-        $(parse_query_string echo_pair "$extra_params") \
-        $(parse_query_string echo_pair "$1")
+        $(foreach_query_pair echo_pair "$extra_params") \
+        $(foreach_query_pair echo_pair "$1")
     do
         echo "$i"
     done | sort
 }
+
+# This is bad; it leaks the secret on the command line. The right thing
+# would be to use -passin, but it doesn't seem to affect -hmac.
+
+hmac_sha1() {
+    printf '%s' "$2" | openssl dgst -sha1 -hmac "$1" -binary | openssl base64
+}
+
+# Here's where we start.
 
 method=GET
 oauth_timestamp="$(date +%s)"
@@ -103,7 +100,7 @@ oauth_nonce="$(openssl rand -base64 12)"
 while getopts 'e:f:p:vu:' OPTION; do
     case $OPTION in
         e) eval "echo \"$OPTARG\""; exit 0;;
-        f) parse_creds_from_file "$OPTARG"; loaded=1;;
+        f) load_cred_file "$OPTARG"; loaded=1;;
         p) extra_params="$OPTARG";;
         u) echo "$(url_encode "$OPTARG")"; exit 0;;
         v) verbose=1;;
@@ -131,7 +128,7 @@ done
 if [ -z "$loaded" ]; then
     cropped_url="${url#*://}"
     host="${cropped_url%%/*}"
-    parse_creds_from_file "$HOME/.curlicue/$host"
+    load_cred_file "$HOME/.curlicue/$host"
 fi
 
 if [ -z "$oauth_consumer_key" ]; then
@@ -141,12 +138,12 @@ fi
 
 # This is where the magic happens.
 
-params="$(mk_params "$url_params" | join '&')"
+params="$(mk_params "$url_params" | join_params '&')"
 base_string="$method&$(url_encode "$url")&$(url_encode "$params")"
 signing_key="$oauth_consumer_secret&$oauth_token_secret"
 oauth_signature="$(hmac_sha1 "$signing_key" "$base_string")"
 sig_params="oauth_signature=$(url_encode "$oauth_signature")"
-auth_header="$(mk_params "$sig_params" | quote_vals | join ', ')"
+auth_header="$(mk_params "$sig_params" | quote_vals | join_params ', ')"
 
 if [ "$verbose" ]; then
     echo "Base string: $base_string" 1>&2
