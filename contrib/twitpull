@@ -25,6 +25,7 @@
 #     retweets_of_me
 #     retweeted_by STATUS_ID
 #     favorites
+#     users/search
 #
 # The first set will be fetched in full (cursors are supported); for the
 # second set, only one page will be returned at a time.
@@ -134,6 +135,10 @@ case "$endpoint" in
     favorites)
         single_page "/$endpoint.xml" "$params" \
             -m //status $(tmpl ${@:-user/screen_name text})
+        ;;
+    users/search)
+        single_page "/$endpoint.xml" "$params" \
+            -m //user $(tmpl ${@:-screen_name name})
         ;;
     *)
         echo "Sorry, $endpoint not supported yet."
