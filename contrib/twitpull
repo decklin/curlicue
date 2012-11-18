@@ -40,6 +40,15 @@
 
 API_ROOT="http://api.twitter.com/1"
 
+# All xmlstarlet usage is selecting a template and outputting plain
+# text, so we'll abstract it with this function. If your system
+# installed the xmlstarlet binary with a different path (Homebrew uses
+# /usr/local/bin/xml), you can adjust for that here.
+
+xst() {
+    xmlstarlet sel -T -t "$@";
+}
+
 # This is pretty horrible. xmlstarlet won't let us output a tab
 # character (it's XML, whitespace is whitespace is whitespace), so we
 # have to make up something that we *hope* will never actually occur in
@@ -61,8 +70,8 @@ multi_page() {
         temp=$(mktemp -t twitpull.XXXXXX)
         curlicue -f "$creds" -- \
             -s "$url?cursor=$cursor${params:+&$params}" > $temp || break
-        xmlstarlet sel -t "$@" -n $temp
-        cursor=$(xmlstarlet sel -t -v //next_cursor $temp)
+        xst "$@" -n $temp
+        cursor=$(xst -v //next_cursor $temp)
         rm $temp
     done | unsep
 }
@@ -71,7 +80,7 @@ single_page() {
     url="$API_ROOT$1"; shift
     params="$1"; shift
     curlicue -f "$creds" -- -s "$url${params:+?$params}" \
-        | xmlstarlet sel -t "$@" -n \
+        | xst "$@" -n \
         | unsep
 }
 
