@@ -69,10 +69,10 @@ multi_page() {
     while [ -n "$cursor" -a "$cursor" != 0 ]; do
         temp=$(mktemp -t twitpull.XXXXXX)
         curlicue -f "$creds" -- \
-            -s "$url?cursor=$cursor${params:+&$params}" > $temp || break
-        xst "$@" -n $temp
-        cursor=$(xst -v //next_cursor $temp)
-        rm $temp
+            -s "$url?cursor=$cursor${params:+&$params}" > "$temp" || break
+        xst "$@" -n "$temp"
+        cursor=$(xst -v //next_cursor "$temp")
+        rm "$temp"
     done | unsep
 }
 
