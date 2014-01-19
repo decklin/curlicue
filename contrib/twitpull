@@ -1,156 +1,76 @@
 #!/bin/sh
 
-# twitpull - list anything that Twitter lets you iterate with a cursor
+# twitpull - get anything from the Twitter API as plain text
 #
 # Usage:
-#     twitpull [-f CREDS] [-u USER] ENDPOINT [FIELDS]
+#     twitpull [-f CREDS] [-n] [-v] RESOURCE JQ_FILTER [PARAMS]
 #
-# where ENDPOINT is one of:
-#     friends
-#     followers
-#     lists
-#     memberships
-#     subscriptions
-#     members LIST
-#     subscribers LIST
-#     incoming
-#     outgoing
-# or:
-#     public_timeline
-#     home_timeline
-#     user_timeline
-#     mentions
-#     retweeted_by_me
-#     retweeted_to_me
-#     retweets_of_me
-#     retweeted_by STATUS_ID
-#     favorites
-#     users/search
+# Example:
+#     # Output the names of accounts @twitterapi is following
+#     twitpull /friends/list?screen_name=twitterapi '.users[].screen_name'
 #
-# The first set will be fetched in full (cursors are supported); for the
-# second set, only one page will be returned at a time.
+# This script no longer has any knowledge of the Twitter data model; you
+# provide an arbitrary resource and what to do with it.
 #
-# CREDS are passed to curlicue, and FIELDS are whatever is available in
-# the appropriate elements of the XML response. USER specifies another
-# user to look at, for list endpoints only (we can't get someone else's
-# following details, just the user IDs).
+# RESOURCE should be a resource of the 1.1 REST API (.json extension not
+# necessary, URL-encoded query string allowed) and JQ_FILTER should be a
+# jq filter which produces strings. If -n is given, only a single
+# request will be made; otherwise, cursors will be followed until the
+# entire resource is listed. More query parameters can be specified as
+# additional arguments.
 #
-# Copyright © 2010 Decklin Foster <decklin@red-bean.com>; distributed
+# Copyright © 2014 Decklin Foster <decklin@red-bean.com>; distributed
 # under the same license as Curlicue.
 
-API_ROOT="http://api.twitter.com/1"
+API_ROOT="https://api.twitter.com/1.1"
+CREDS="$HOME/.curlicue/api.twitter.com"
 
-# All xmlstarlet usage is selecting a template and outputting plain
-# text, so we'll abstract it with this function. If your system
-# installed the xmlstarlet binary with a different path (Homebrew uses
-# /usr/local/bin/xml), you can adjust for that here.
-
-xst() {
-    xmlstarlet sel -T -t "$@";
+curlicue_fetch() {
+    local url="$1"; shift
+    test -n "$VERBOSE" && echo "fetching: $url" 1>&2
+    curlicue -f "$CREDS" -- -s "$url"
 }
 
-# This is pretty horrible. xmlstarlet won't let us output a tab
-# character (it's XML, whitespace is whitespace is whitespace), so we
-# have to make up something that we *hope* will never actually occur in
-# the input and transform it back to a tab at the end. Also, it can't
-# have any shell metacharacters since we don't quote the output of tmpl.
-
-sep="@@@@"
-tab="$(printf '\t')"
-
-unsep() {
-    sed "/^$/d;s/$sep/$tab/g"
+get_resource() {
+    local url="$1"; shift
+    local filter="$1"; shift
+    local params="$1"; shift
+    if test -n "$NO_CURSOR"; then
+        curlicue_fetch "$url${params:+?$params}" | jq -r "$filter"
+    else
+        temp="$(mktemp -t twitpull.XXXXXX)"; trap "rm -f '$temp'" EXIT
+        cursor='-1'
+        while test -n "$cursor" -a "$cursor" != 0; do
+            curlicue_fetch "$url?cursor=$cursor${params:+&$params}" > "$temp" || break
+            jq -r "$filter" < "$temp"
+            cursor=$(jq -r '.next_cursor_str' < "$temp")
+            if test "$cursor" = 'null'; then
+                echo "error: could not find cursor in response: $(cat "$temp")" 1>&2
+                break
+            fi
+        done
+    fi
 }
 
-multi_page() {
-    url="$API_ROOT$1"; shift
-    params="$1"; shift
-    cursor=-1
-    while [ -n "$cursor" -a "$cursor" != 0 ]; do
-        temp=$(mktemp -t twitpull.XXXXXX)
-        curlicue -f "$creds" -- \
-            -s "$url?cursor=$cursor${params:+&$params}" > "$temp" || break
-        xst "$@" -n "$temp"
-        cursor=$(xst -v //next_cursor "$temp")
-        rm "$temp"
-    done | unsep
-}
-
-single_page() {
-    url="$API_ROOT$1"; shift
-    params="$1"; shift
-    curlicue -f "$creds" -- -s "$url${params:+?$params}" \
-        | xst "$@" -n \
-        | unsep
-}
-
-tmpl() {
-    for i; do echo "-o $sep"; echo "-v $i"; done | sed 1d
-}
-
-while getopts 'f:u:' OPTION; do
-    case $OPTION in
-        f) creds="$OPTARG";;
-        u) user="$OPTARG";;
-        *) echo "Unknown option: $OPTION"; exit 2;;
+while getopts 'f:nv' opt; do
+    case "$opt" in
+        f) CREDS="$OPTARG";;
+        n) NO_CURSOR=1;;
+        v) VERBOSE=1;;
+        *) echo "Unknown option: $opt"; exit 2;;
     esac
 done
 shift $(($OPTIND-1))
 
-creds="${creds:-$HOME/.curlicue/api.twitter.com}"
-user="${user:-$(curlicue -f "$creds" -e '$screen_name')}"
+resource="$1"; shift
+filter="$1"; shift
 
-case "$1" in
-    *\?*) endpoint="${1%%\?*}"; params="${1#*\?}";;
-    *) endpoint="$1";;
+case "$resource" in
+    *\?*) params="${resource#*\?}"; resource="${resource%%\?*}";;
 esac
-shift
 
-case "$endpoint" in
-    friends|followers)
-        multi_page "/statuses/$endpoint.xml" "$params" \
-            -m //user $(tmpl ${@:-id screen_name})
-        ;;
-    lists)
-        multi_page "/$user/$endpoint.xml" "$params" \
-            -m //list $(tmpl ${@:-id name})
-        ;;
-    memberships|subscriptions)
-        multi_page "/$user/lists/$endpoint.xml" "$params" \
-            -m //list $(tmpl ${@:-id full_name})
-        ;;
-    members|subscribers)
-        list="$1"; shift
-        multi_page "/$user/$list/$endpoint.xml" "$params" \
-            -m //user $(tmpl ${@:-id screen_name})
-        ;;
-    incoming|outgoing)
-        multi_page "/friendships/$endpoint.xml" "$params" \
-            -m //user $(tmpl ${@:-id screen_name})
-        ;;
-    public_timeline|home_timeline|user_timeline|mentions)
-        single_page "/statuses/$endpoint.xml" "$params" \
-            -m //status $(tmpl ${@:-id text})
-        ;;
-    retweeted_by_me|retweeted_to_me|retweets_of_me)
-        single_page "/statuses/$endpoint.xml" "$params" \
-            -m //status $(tmpl ${@:-id text})
-        ;;
-    retweeted_by)
-        id="$1"; shift
-        single_page "/statuses/$id/$endpoint.xml" "$params" \
-            -m //user $(tmpl ${@:-screen_name created_at})
-        ;;
-    favorites)
-        single_page "/$endpoint.xml" "$params" \
-            -m //status $(tmpl ${@:-user/screen_name text})
-        ;;
-    users/search)
-        single_page "/$endpoint.xml" "$params" \
-            -m //user $(tmpl ${@:-screen_name name})
-        ;;
-    *)
-        echo "Sorry, $endpoint not supported yet."
-        exit 1
-        ;;
-esac
+for param; do
+    params="${params:+$params&}$param"
+done
+
+get_resource "$API_ROOT${resource%.json}.json" "$filter" "$params"
