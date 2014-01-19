@@ -5,19 +5,24 @@
 # Usage:
 #     twitpull [-f CREDS] [-n] [-v] RESOURCE JQ_FILTER [PARAMS]
 #
-# Example:
-#     # Output the names of accounts @twitterapi is following
-#     twitpull /friends/list?screen_name=twitterapi '.users[].screen_name'
-#
 # This script no longer has any knowledge of the Twitter data model; you
 # provide an arbitrary resource and what to do with it.
 #
 # RESOURCE should be a resource of the 1.1 REST API (.json extension not
 # necessary, URL-encoded query string allowed) and JQ_FILTER should be a
-# jq filter which produces strings. If -n is given, only a single
-# request will be made; otherwise, cursors will be followed until the
-# entire resource is listed. More query parameters can be specified as
-# additional arguments.
+# jq filter which produces strings. More query parameters can be
+# specified as additional arguments.
+#
+# -f will be passed along to Curlicue. If -n is given, only make a
+# single request; otherwise, use a cursor to list the entire resource in
+# multiple requests. If -v is given, echo URLs to stderr before fetching
+# them.
+#
+# Examples:
+#     # Read the latest tweets in your home timeline, formatted nicely
+#     twitpull -n /statuses/home_timeline '.[] | ("<" + .user.screen_name + ">\t" + .text)'
+#     # List the names of all accounts @twitterapi is following
+#     twitpull /friends/list '.users[].screen_name' screen_name=twitterapi
 #
 # Copyright © 2014 Decklin Foster <decklin@red-bean.com>; distributed
 # under the same license as Curlicue.
