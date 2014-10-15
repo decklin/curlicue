@@ -77,7 +77,7 @@ With that, let's get the token. We're not a web app, so we use the "out
 of band" callback method:
 
     curlicue -f consumer -p 'oauth_callback=oob' -- \
-        -d '' 'https://api.twitter.com/oauth/request_token' > request_token
+        -X POST https://api.twitter.com/oauth/request_token > request_token
 
 The arguments passed along to curl are parsed to get the HTTP method and
 URL so that the request can be signed.
@@ -92,8 +92,8 @@ read with -f filled in) instead of running curl.
 Visiting this URL in our browser and selecting "Allow" will give us a
 PIN, which we can in turn use to obtain an access token:
 
-    curlicue -f consumer -f req_token -p 'oauth_verifier=PIN' -- \
-        -d '' 'https://api.twitter.com/oauth/access_token' > access_token
+    curlicue -f consumer -f request_token -p 'oauth_verifier=PIN' -- \
+        -X POST https://api.twitter.com/oauth/access_token > access_token
 
 Note that we need to read in both the consumer and token information
 from here on. Now we can actually make an interesting request:
