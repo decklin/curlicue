@@ -3,7 +3,7 @@
 # twitpull - get anything from the Twitter API as plain text
 #
 # Usage:
-#     twitpull [-f CREDS] [-n] [-v] RESOURCE JQ_FILTER [PARAMS]
+#     twitpull [-f CREDS] [-n] [-v] RESOURCE JQ_FILTER [PARAMS...]
 #
 # This script no longer has any knowledge of the Twitter data model; you
 # provide an arbitrary resource and what to do with it.
@@ -27,20 +27,28 @@
 # Copyright © 2014 Decklin Foster <decklin@red-bean.com>; distributed
 # under the same license as Curlicue.
 
-API_ROOT="https://api.twitter.com/1.1"
-CREDS="$HOME/.curlicue/api.twitter.com"
+api_root='https://api.twitter.com/1.1'
+creds="$HOME/.curlicue/api.twitter.com"
+while getopts 'f:nv' opt; do
+    case "$opt" in
+        f) creds="$OPTARG";;
+        n) no_cursor=1;;
+        v) verbose=1;;
+        *) echo "Unknown option: $opt"; exit 2;;
+    esac
+done; shift $(($OPTIND-1))
 
 curlicue_fetch() {
     local url="$1"; shift
-    test -n "$VERBOSE" && echo "fetching: $url" 1>&2
-    curlicue -f "$CREDS" -- -s "$url"
+    test -n "$verbose" && echo "fetching: $url" 1>&2
+    curlicue -f "$creds" -- -s "$url"
 }
 
 get_resource() {
     local url="$1"; shift
     local filter="$1"; shift
     local params="$1"; shift
-    if test -n "$NO_CURSOR"; then
+    if test -n "$no_cursor"; then
         curlicue_fetch "$url${params:+?$params}" | jq -r "$filter"
     else
         temp="$(mktemp -t twitpull.XXXXXX)"; trap "rm -f '$temp'" EXIT
@@ -57,16 +65,6 @@ get_resource() {
     fi
 }
 
-while getopts 'f:nv' opt; do
-    case "$opt" in
-        f) CREDS="$OPTARG";;
-        n) NO_CURSOR=1;;
-        v) VERBOSE=1;;
-        *) echo "Unknown option: $opt"; exit 2;;
-    esac
-done
-shift $(($OPTIND-1))
-
 resource="$1"; shift
 filter="$1"; shift
 
@@ -78,4 +76,4 @@ for param; do
     params="${params:+$params&}$param"
 done
 
-get_resource "$API_ROOT${resource%.json}.json" "$filter" "$params"
+get_resource "$api_root${resource%.json}.json" "$filter" "$params"

@@ -97,17 +97,16 @@ method=GET
 oauth_timestamp="$(date +%s)"
 oauth_nonce="$(openssl rand -base64 12)"
 
-while getopts 'e:f:p:vu:' OPTION; do
-    case $OPTION in
+while getopts 'e:f:p:vu:' opt; do
+    case "$opt" in
         e) eval "echo \"$OPTARG\""; exit 0;;
         f) load_cred_file "$OPTARG"; loaded=1;;
         p) extra_params="$OPTARG";;
         u) echo "$(url_encode "$OPTARG")"; exit 0;;
         v) verbose=1;;
-        *) echo "Unknown option: $OPTION"; exit 2;;
+        *) echo "Unknown option: $opt"; exit 2;;
     esac
-done
-shift $(($OPTIND-1))
+done; shift $(($OPTIND-1))
 
 # The remaining args in $@ go directly to curl. Fools that we are, we
 # attempt to parse them here. Only one URL is supported.
@@ -125,13 +124,13 @@ for i; do
     prev="$i"
 done
 
-if [ -z "$loaded" ]; then
+if test -z "$loaded"; then
     cropped_url="${url#*://}"
     host="${cropped_url%%/*}"
     load_cred_file "$HOME/.curlicue/$host"
 fi
 
-if [ -z "$oauth_consumer_key" ]; then
+if test -z "$oauth_consumer_key"; then
     echo "Couldn't load a consumer key! Exiting." 1>&2
     exit 1
 fi
@@ -145,7 +144,7 @@ oauth_signature="$(hmac_sha1 "$signing_key" "$base_string")"
 sig_params="oauth_signature=$(url_encode "$oauth_signature")"
 auth_header="$(mk_params "$sig_params" | quote_vals | join_params ', ')"
 
-if [ "$verbose" ]; then
+if test -n "$verbose"; then
     echo "Base string: $base_string" 1>&2
     echo "Authorization: OAuth $auth_header" 1>&2
 fi
