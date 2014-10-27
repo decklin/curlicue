@@ -14,12 +14,23 @@ extra options at the beginning:
     curlicue [-f FILE ...] [-p PARAMS] [-- CURL_OPTS] URL
 
 OAuth credentials are read from FILE(s). Extra OAuth parameters, if any,
-are specified with -p. Parameters in files or in the argument to -p
-should be percent-encoded and separated with &. Either -- or a URL ends
-processing of Curlicue parameters and passes the rest along to curl.
+are specified with -p. Parameters should be URL-encoded and separated
+with &. Either -- or a URL ends processing of Curlicue parameters and
+passes the rest along to curl.
 
 If you don't specify any FILEs, Curlicue will try to read credentials
 from ~/.curlicue/HOST, where HOST is the hostname component of your URL.
+
+Installation
+------------
+
+Curlicue is now split up into several scripts, so you will need to
+install at least curlicue and curl-encode to a directory in your PATH.
+This can be done with:
+
+    install curlicue curl-encode /usr/local/bin
+
+You may also want to include curlicue-setup and the scripts in contrib.
 
 Setup
 -----
@@ -67,7 +78,7 @@ them:
 
 The first step in OAuth is obtaining a request token. To make that
 request, we'll need a file containing the consumer key and secret (make
-sure that their values are percent-encoded):
+sure that their values are URL-encoded):
 
     cat << EOF > consumer
     oauth_consumer_key=KEY&oauth_consumer_secret=SECRET
