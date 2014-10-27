@@ -46,7 +46,7 @@ echo_pair() {
 }
 
 join_params() {
-    paste -s -d '&' - | sed "s/&/$1/g"
+    paste -s -d "$1" -
 }
 
 # The timestamp/nonce are generated in this script, so they need to be
@@ -126,7 +126,7 @@ base_string="$(curl-encode "=$method" "=$url" "=$params")"
 signing_key="$oauth_consumer_secret&$oauth_token_secret"
 oauth_signature="$(hmac_sha1 "$signing_key" "$base_string")"
 sig_params="$(curl-encode "oauth_signature=$oauth_signature")"
-auth_header="$(mk_params "$sig_params" | quote_vals | join_params ', ')"
+auth_header="$(mk_params "$sig_params" | quote_vals | join_params ',')"
 
 if test -n "$verbose"; then
     echo "Base string: $base_string" 1>&2
