@@ -8,9 +8,8 @@
 # This script no longer has any knowledge of the Twitter data model; you
 # provide an arbitrary resource and what to do with it.
 #
-# RESOURCE should be a resource of the 1.1 REST API (.json extension not
-# necessary, URL-encoded query string allowed). More query parameters can
-# be specified as additional arguments.
+# RESOURCE must be the name of a 1.1 REST API resource (no leading / or
+# .json extension). Parameters may be specified as additional arguments.
 #
 # The response will be passed through `jq -r`; -j FILTER will override
 # the default filter of '.' which will print the entire response.
@@ -22,9 +21,9 @@
 #
 # Examples:
 #     # Read the latest tweets in your home timeline, formatted nicely
-#     twitpull -n -j '.[] | "<" + .user.screen_name + ">\t" + .text' /statuses/home_timeline
+#     twitpull -n -j '.[] | "<" + .user.screen_name + ">\t" + .text' statuses/home_timeline
 #     # List the names of all accounts @twitterapi is following
-#     twitpull -j '.users[].screen_name' /friends/list screen_name=twitterapi
+#     twitpull -j '.users[].screen_name' friends/list screen_name=twitterapi
 #
 # Copyright © 2014 Decklin Foster <decklin@red-bean.com>; distributed
 # under the same license as Curlicue.
@@ -69,13 +68,4 @@ get_resource() {
 }
 
 resource="$1"; shift
-
-case "$resource" in
-    *\?*) params="${resource#*\?}"; resource="${resource%%\?*}";;
-esac
-
-for param; do
-    params="${params:+$params&}$param"
-done
-
-get_resource "$api_root${resource%.json}.json" "$params"
+get_resource "$api_root/$resource.json" "$(curl-encode "$@")"
