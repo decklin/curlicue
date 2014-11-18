@@ -21,7 +21,7 @@
 #
 # Examples:
 #     # Read the latest tweets in your home timeline, formatted nicely
-#     twitpull -n -j '.[] | "<" + .user.screen_name + ">\t" + .text' statuses/home_timeline
+#     twitpull -n -j '.[] | "<\(.user.screen_name)>\t\(.text)"' statuses/home_timeline
 #     # List the names of all accounts @twitterapi is following
 #     twitpull -j '.users[].screen_name' friends/list screen_name=twitterapi
 #
