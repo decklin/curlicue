@@ -4,7 +4,7 @@
 #
 # Usage:
 #
-#     twitpull [-f CREDS] [-j FILTER] [-n] [-v] RESOURCE [PARAMS...]
+#     twitpull [-f CREDS] [-j FILTER] [-n] [-p] [-v] RESOURCE [PARAMS...]
 #
 # This script no longer has any knowledge of the Twitter data model; you
 # provide an arbitrary resource and what to do with it.
@@ -21,10 +21,12 @@
 #     override the default filter of '.' which will print the entire
 #     response.
 #
-#     If -n is given, only make a single request; otherwise, use a
-#     cursor to list the entire resource in multiple requests.
+#     If -n or -p are given, only make a single request; otherwise, use
+#     a cursor to list the entire resource in multiple requests. If -p
+#     is given, make a POST request.
 #
-#     If -v is given, echo URLs to stderr before fetching them.
+#     If -v is given, echo URLs and parameters to stderr before
+#     requesting them.
 #
 # Examples:
 #
@@ -40,32 +42,38 @@
 api_root='https://api.twitter.com/1.1'
 creds="$HOME/.curlicue/api.twitter.com"
 filter='.'
-while getopts 'f:j:nv' opt; do
+method=GET
+while getopts 'f:j:npv' opt; do
     case "$opt" in
         f) creds="$OPTARG";;
         j) filter="$OPTARG";;
         n) no_cursor=1;;
+        p) method=POST; no_cursor=1;;
         v) verbose=1;;
         *) echo "Unknown option: $opt"; exit 2;;
     esac
 done; shift $(($OPTIND-1))
 
-curlicue_fetch() {
+curlicue_req() {
     local url="$1"; shift
-    test -n "$verbose" && echo "fetching: $url" 1>&2
-    curlicue -f "$creds" -- -s "$url"
+    local params="$1"; shift
+    test -n "$verbose" && echo "requesting: $method $url" ${params:+"with params $params"} 1>&2
+    case "$method" in
+        GET) curlicue -f "$creds" -- -s "$url${params:+?$params}";;
+        POST) curlicue -f "$creds" -- -s -d "$params" "$url";;
+    esac
 }
 
 get_resource() {
     local url="$1"; shift
     local params="$1"; shift
     if test -n "$no_cursor"; then
-        curlicue_fetch "$url${params:+?$params}" | jq -r "$filter"
+        curlicue_req "$url" "$params" | jq -r "$filter"
     else
         temp="$(mktemp -t twitpull.XXXXXX)"; trap "rm -f '$temp'" EXIT
         cursor='-1'
         while test -n "$cursor" -a "$cursor" != 0; do
-            curlicue_fetch "$url?cursor=$cursor${params:+&$params}" > "$temp" || break
+            curlicue_req "$url" "cursor=$cursor${params:+&$params}" > "$temp" || break
             jq -r "$filter" < "$temp"
             cursor=$(jq -r '.next_cursor_str' < "$temp")
             if test "$cursor" = 'null'; then
