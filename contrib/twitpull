@@ -3,6 +3,7 @@
 # twitpull - get anything from the Twitter API as plain text
 #
 # Usage:
+#
 #     twitpull [-f CREDS] [-j FILTER] [-n] [-v] RESOURCE [PARAMS...]
 #
 # This script no longer has any knowledge of the Twitter data model; you
@@ -11,17 +12,25 @@
 # RESOURCE must be the name of a 1.1 REST API resource (no leading / or
 # .json extension). Parameters may be specified as additional arguments.
 #
-# The response will be passed through `jq -r`; -j FILTER will override
-# the default filter of '.' which will print the entire response.
+# Options:
 #
-# -f will be passed along to Curlicue. If -n is given, only make a
-# single request; otherwise, use a cursor to list the entire resource in
-# multiple requests. If -v is given, echo URLs to stderr before fetching
-# them.
+#     If you need to specify credentials, -f will be passed along to
+#     Curlicue.
+#
+#     The response will be passed through `jq -r`; -j FILTER will
+#     override the default filter of '.' which will print the entire
+#     response.
+#
+#     If -n is given, only make a single request; otherwise, use a
+#     cursor to list the entire resource in multiple requests.
+#
+#     If -v is given, echo URLs to stderr before fetching them.
 #
 # Examples:
+#
 #     # Read the latest tweets in your home timeline, formatted nicely
 #     twitpull -n -j '.[] | "<\(.user.screen_name)>\t\(.text)"' statuses/home_timeline
+#
 #     # List the names of all accounts @twitterapi is following
 #     twitpull -j '.users[].screen_name' friends/list screen_name=twitterapi
 #
