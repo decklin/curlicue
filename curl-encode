@@ -6,7 +6,7 @@
 # Encoded args will be separated by & in the output.
 
 encode_arg() {
-    curl -sw '%{url_effective}' --data-urlencode "$1" -G / | cut -c 3-
+    curl -s -w '%{url_effective}' --data-urlencode "$1" -G / | cut -c 3-
 }
 
 for i; do encode_arg "$i"; done | paste -s -d '&' -
