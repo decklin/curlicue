@@ -4,7 +4,7 @@
 #
 # Usage:
 #
-#     twitpull [-f CREDS] [-j FILTER] [-n] [-p] [-v] RESOURCE [PARAMS...]
+#     twitpull [-f CREDS] [-j FILTER] [-n] [-p] [-s] [-v] RESOURCE [PARAMS...]
 #
 # This script no longer has any knowledge of the Twitter data model; you
 # provide an arbitrary resource and what to do with it.
@@ -25,6 +25,9 @@
 #     a cursor to list the entire resource in multiple requests. If -p
 #     is given, make a POST request.
 #
+#     If -s is given, check the rate limit status before making requests
+#     and sleep if necessary.
+#
 #     If -v is given, echo URLs and parameters to stderr before
 #     requesting them.
 #
@@ -43,21 +46,49 @@ api_root='https://api.twitter.com/1.1'
 creds="$HOME/.curlicue/api.twitter.com"
 filter='.'
 method=GET
-while getopts 'f:j:npv' opt; do
+while getopts 'f:j:npsv' opt; do
     case "$opt" in
         f) creds="$OPTARG";;
         j) filter="$OPTARG";;
         n) no_cursor=1;;
         p) method=POST; no_cursor=1;;
+        s) sleep=1;;
         v) verbose=1;;
         *) echo "Unknown option: $opt"; exit 2;;
     esac
 done; shift $(($OPTIND-1))
 
+get_rate_limit() {
+    local resource="$1"; shift
+    raw_request GET application/rate_limit_status |
+        jq -r '.resources | add | .["/'"$resource"'"] | "\(.remaining) \(.limit) \(.reset)"'
+}
+
 request() {
     local resource="$1"; shift
     local params="$1" # optional
+    if test -n "$sleep"; then
+        get_rate_limit "$resource" | while read remaining limit reset; do
+            until_reset="$(($reset - $(date +%s)))"
+            if test "$remaining" -lt 1; then
+                delay="$(($until_reset + 2))"
+            elif test "$remaining" -lt "$limit"; then
+                delay="$(($until_reset / ($remaining + 1) + 1))"
+            else
+                delay=0
+            fi
+            test -n "$verbose" && printf '%s... ' "sleeping: $delay at $(date +%X) for $resource ($remaining/$limit, $until_reset)" 1>&2
+            sleep "$delay"
+        done
+    fi
     test -n "$verbose" && echo "requesting: $method $resource" ${params:+"with params $params"} 1>&2
+    raw_request "$method" "$resource" "$params"
+}
+
+raw_request() {
+    local method="$1"; shift
+    local resource="$1"; shift
+    local params="$1" # optional
     local url="$api_root/$resource.json"
     case "$method" in
         GET) curlicue -f "$creds" -- -s "$url${params:+?$params}";;
