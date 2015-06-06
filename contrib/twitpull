@@ -54,35 +54,32 @@ while getopts 'f:j:npv' opt; do
     esac
 done; shift $(($OPTIND-1))
 
-curlicue_req() {
-    local url="$1"; shift
+request() {
+    local resource="$1"; shift
     local params="$1"; shift
-    test -n "$verbose" && echo "requesting: $method $url" ${params:+"with params $params"} 1>&2
+    test -n "$verbose" && echo "requesting: $method $resource" ${params:+"with params $params"} 1>&2
+    local url="$api_root/$resource.json"
     case "$method" in
         GET) curlicue -f "$creds" -- -s "$url${params:+?$params}";;
         POST) curlicue -f "$creds" -- -s -d "$params" "$url";;
     esac
 }
 
-get_resource() {
-    local url="$1"; shift
-    local params="$1"; shift
-    if test -n "$no_cursor"; then
-        curlicue_req "$url" "$params" | jq -r "$filter"
-    else
-        temp="$(mktemp -t twitpull.XXXXXX)"; trap "rm -f '$temp'" EXIT
-        cursor='-1'
-        while test -n "$cursor" -a "$cursor" != 0; do
-            curlicue_req "$url" "cursor=$cursor${params:+&$params}" > "$temp" || break
-            jq -r "$filter" < "$temp"
-            cursor=$(jq -r '.next_cursor_str' < "$temp")
-            if test "$cursor" = 'null'; then
-                echo "error: could not find cursor in response: $(cat "$temp")" 1>&2
-                break
-            fi
-        done
-    fi
-}
-
 resource="$1"; shift
-get_resource "$api_root/$resource.json" "$(curl-encode "$@")"
+params="$(curl-encode "$@")"
+
+if test -n "$no_cursor"; then
+    request "$resource" "$params" | jq -r "$filter"
+else
+    temp="$(mktemp -t twitpull.XXXXXX)"; trap "rm -f '$temp'" EXIT
+    cursor='-1'
+    while test -n "$cursor" -a "$cursor" != 0; do
+        request "$resource" "cursor=$cursor${params:+&$params}" > "$temp" || break
+        jq -r "$filter" < "$temp"
+        cursor=$(jq -r '.next_cursor_str' < "$temp")
+        if test "$cursor" = 'null'; then
+            echo "error: could not find cursor in response: $(cat "$temp")" 1>&2
+            break
+        fi
+    done
+fi
