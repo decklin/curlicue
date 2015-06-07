@@ -11,15 +11,23 @@ Usage
 A Curlicue command looks like the equivalent curl command, with some
 extra options at the beginning:
 
-    curlicue [-f FILE ...] [-p PARAMS] [-- CURL_OPTS] URL
+    curlicue [-f FILE ...] [-p PARAMS] [-P] [-- CURL_OPTS] URL
 
-OAuth credentials are read from FILE(s). Extra OAuth parameters, if any,
-are specified with -p. Parameters should be URL-encoded and separated
-with &. Either -- or a URL ends processing of Curlicue parameters and
-passes the rest along to curl.
+OAuth credentials are read from FILE(s). If you don't specify any FILEs
+with -f, Curlicue will try to read credentials from ~/.curlicue/HOST,
+where HOST is the hostname component of your URL.
 
-If you don't specify any FILEs, Curlicue will try to read credentials
-from ~/.curlicue/HOST, where HOST is the hostname component of your URL.
+Extra OAuth parameters, if any, are specified with -p; these parameters
+should be URL-encoded and separated with &.
+
+Either -- or a URL (any argument starting with "http") ends processing
+of Curlicue parameters and passes all further options along to curl.
+These options will be checked for the -d/--data or -X/--request, since
+adding application/x-www-form-urlencoded POST parameters or otherwise
+changing the HTTP method will change the OAuth signature base string. If
+you are sending POST data with some other content-type, specify -P
+(before the options that are passed along to curl) to disable treating
+POST data as parameters.
 
 Installation
 ------------

@@ -82,10 +82,11 @@ method=GET
 oauth_timestamp="$(date +%s)"
 oauth_nonce="$(openssl rand -base64 12)"
 
-while getopts 'e:f:p:vu:' opt; do
+while getopts 'e:f:Pp:vu:' opt; do
     case "$opt" in
         e) eval "echo \"$OPTARG\""; exit 0;;
         f) load_cred_file "$OPTARG"; loaded=1;;
+        P) data_is_not_params=1;;
         p) extra_params="$OPTARG";;
         v) verbose=1;;
         *) echo "Unknown option: $opt"; exit 2;;
@@ -97,7 +98,7 @@ done; shift $(($OPTIND-1))
 
 for i; do
     case "$prev" in
-        -d|--data) url_params="$i";;
+        -d|--data) test -z "$data_is_not_params" && url_params="$i";;
         -X|--request) method="$i";;
     esac
     case "$i" in
