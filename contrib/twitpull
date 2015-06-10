@@ -56,7 +56,7 @@ done; shift $(($OPTIND-1))
 
 request() {
     local resource="$1"; shift
-    local params="$1"; shift
+    local params="$1" # optional
     test -n "$verbose" && echo "requesting: $method $resource" ${params:+"with params $params"} 1>&2
     local url="$api_root/$resource.json"
     case "$method" in
