@@ -81,7 +81,7 @@ request() {
             sleep "$delay"
         done
     fi
-    test -n "$verbose" && echo "requesting: $method $resource" ${params:+"with params $params"} 1>&2
+    test -n "$verbose" && echo "requesting: $method $resource" ${params:+"($params)"} 1>&2
     raw_request "$method" "$resource" "$params"
 }
 
