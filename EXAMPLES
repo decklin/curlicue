@@ -2,18 +2,19 @@ Examples
 ========
 
 These examples show how to set up and then use Curlicue with various
-services.
+services. If there's no key and secret specified in the example, that
+means you need to supply your own (either interactively, or with the -K
+and -S options).
 
 Twitter
 -------
 
 Create your own application at https://apps.twitter.com/ first.
 
-    curlicue-setup \
-        'https://api.twitter.com/oauth/request_token' \
-        'https://api.twitter.com/oauth/authorize?oauth_token=$oauth_token' \
-        'https://api.twitter.com/oauth/access_token' \
-        credentials
+    curlicue -F credentials \
+        -R 'https://api.twitter.com/oauth/request_token' \
+        -A 'https://api.twitter.com/oauth/authorize?oauth_token=$oauth_token' \
+        -T 'https://api.twitter.com/oauth/access_token'
 
     curlicue -f credentials \
         'https://api.twitter.com/1.1/statuses/home_timeline.json'
@@ -31,18 +32,15 @@ https://groups.google.com/forum/#!topic/twitter-development-talk/yCzVnHqHIWo
 Google
 ------
 
-Google requires an initial "scope" parameter. For this example, we'll
-ask for access to Calendar. Note that the consumer key and consumer
-secret are both "anonymous".
+Google requires an initial "scope" parameter. They are strict about it:
+If you specify HTTPS, you must use HTTPS for all authenticated requests.
 
-Also note that Google is strict about scope: If you specify HTTPS, you
-must use HTTPS for all authenticated requests.
+Both the key and the secret are really the literal string "anonymous".
 
-    curlicue-setup \
-        'https://www.google.com/accounts/OAuthGetRequestToken?scope=https%3A%2F%2Fwww.google.com%2Fcalendar%2Ffeeds%2F' \
-        'https://www.google.com/accounts/OAuthAuthorizeToken?oauth_token=$oauth_token' \
-        'https://www.google.com/accounts/OAuthGetAccessToken' \
-        credentials
+    curlicue -F credentials -K anonymous -S anonymous \
+        -R 'https://www.google.com/accounts/OAuthGetRequestToken?scope=https%3A%2F%2Fwww.google.com%2Fcalendar%2Ffeeds%2F' \
+        -A 'https://www.google.com/accounts/OAuthAuthorizeToken?oauth_token=$oauth_token' \
+        -T 'https://www.google.com/accounts/OAuthGetAccessToken'
 
     curlicue -f credentials \
         'https://www.google.com/calendar/feeds/default/allcalendars/full'
@@ -54,11 +52,10 @@ When setting up your application on Yahoo Developer Network, you need to
 choose at least one service that requires read/write access. For my test
 application I chose Delicious.
 
-    curlicue-setup \
-        'https://api.login.yahoo.com/oauth/v2/get_request_token' \
-        'https://api.login.yahoo.com/oauth/v2/request_auth?oauth_token=$oauth_token' \
-        'https://api.login.yahoo.com/oauth/v2/get_token' \
-        credentials
+    curlicue -F credentials \
+        -R 'https://api.login.yahoo.com/oauth/v2/get_request_token' \
+        -A 'https://api.login.yahoo.com/oauth/v2/request_auth?oauth_token=$oauth_token' \
+        -T 'https://api.login.yahoo.com/oauth/v2/get_token'
 
     curlicue -f credentials \
         'http://api.del.icio.us/v2/posts/recent'
@@ -69,11 +66,10 @@ TripIt
 In this case, the "oob" callback is not supported, but we also don't need
 a PIN, so we can fake it with an invalid URL.
 
-    curlicue-setup \
-        'https://api.tripit.com/oauth/request_token' \
-        'https://www.tripit.com/oauth/authorize?oauth_token=$oauth_token&oauth_callback=http%3A%2F%2Fnowhere.invalid%2F' \
-        'https://api.tripit.com/oauth/access_token' \
-        credentials
+    curlicue -F credentials \
+        -R 'https://api.tripit.com/oauth/request_token' \
+        -A 'https://www.tripit.com/oauth/authorize?oauth_token=$oauth_token&oauth_callback=http%3A%2F%2Fnowhere.invalid%2F' \
+        -T 'https://api.tripit.com/oauth/access_token'
 
     curlicue -f credentials \
         'https://api.tripit.com/v1/list/trip'
@@ -83,11 +79,10 @@ Vimeo
 
 This one is pretty straightforward.
 
-    curlicue-setup \
+    curlicue -F credentials \
         'http://vimeo.com/oauth/request_token' \
         'http://vimeo.com/oauth/authorize?oauth_token=$oauth_token&permission=read' \
-        'http://vimeo.com/oauth/access_token' \
-        credentials
+        'http://vimeo.com/oauth/access_token'
 
     curlicue -f credentials \
         'http://vimeo.com/api/rest/v2/?method=vimeo.channels.getAll'
@@ -96,13 +91,12 @@ Test Server
 -----------
 
 A kind soul is running this test server. No authorization needed, so
-again, leave the PIN blank.
+you can enter a blank PIN.
 
-    curlicue-setup \
-        'http://term.ie/oauth/example/request_token.php' \
-        '' \
-        'http://term.ie/oauth/example/access_token.php' \
-        credentials
+    curlicue -F credentials -K '' -S '' \
+        -R 'http://term.ie/oauth/example/request_token.php' \
+        -A '' \
+        -T 'http://term.ie/oauth/example/access_token.php'
 
     curlicue -f credentials \
         'http://term.ie/oauth/example/echo_api.php?foo=bar'

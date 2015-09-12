@@ -42,25 +42,34 @@ but once curlicue is in your PATH, they can be run from anywhere.
 Setup
 -----
 
-To perform the initial OAuth "dance", run curlicue-setup with four
-arguments: the request token URL, the user authorization URL, the access
-token URL, and a file to output credentials to. Typically, this will
-look something like:
+To perform the initial OAuth "dance", run curlicue with the -F option:
 
-    curlicue-setup \
-        'https://oauth.provider/request_token' \
-        'https://oauth.provider/authorize?oauth_token=$oauth_token' \
-        'https://oauth.provider/access_token' \
-        credentials
+    curlicue -F NEW_CREDENTIALS_FILE
 
-In the user authorization URL (only), variables from the consumer
-information or request token can be interpolated using shell syntax.
-Your provider may need additional URL parameters for one or more of the
-steps; consult their documentation. You will be prompted for the
-consumer key and secret.
+You'll need the consumer key and secret that you'll be using, and three
+URLs: the request token URL, the user authorization URL (this one is
+special), and the access token URL. You can enter them interactively, or
+with these additional options:
 
-For examples of how this works with several popular OAuth providers,
-refer to EXAMPLES.
+    curlicue -F NEW_CREDENTIALS_FILE \
+        -K YOUR_CONSUMER_KEY \
+        -S YOUR_CONSUMER_SECRET \
+        -A 'https://oauth.provider/request_token' \
+        -S 'https://oauth.provider/authorize?oauth_token=$oauth_token' \
+        -R 'https://oauth.provider/access_token'
+
+Warning: using -S will make your consumer secret visible on the command
+line and in your shell history, so don't if that's a security concern.
+
+In the authorization URL (only), variables from the consumer information
+or request token can be interpolated using shell syntax. Typically, the
+only parameter you need to deal with here is 'oauth_token=$oauth_token'.
+Remember to use single quotes or escape the $ so it is not interpreted
+by your shell before being passed to curlicue. Some OAuth providers may
+need additional URL parameters; check their documentation.
+
+For examples of how this works with a few popular OAuth providers, see
+EXAMPLES.
 
 Included Scripts
 ----------------
@@ -90,7 +99,7 @@ request, we'll need a file containing the consumer key and secret (make
 sure that their values are URL-encoded):
 
     cat << EOF > consumer
-    oauth_consumer_key=KEY&oauth_consumer_secret=SECRET
+    oauth_consumer_key=YOUR_KEY&oauth_consumer_secret=YOUR_SECRET
     EOF
 
 With that, let's get the token. We're not a web app, so we use the "out
@@ -102,17 +111,19 @@ of band" callback method:
 The arguments passed along to curl are parsed to get the HTTP method and
 URL so that the request can be signed.
 
-Now we need to approve the app. We can build URLs with the -e option,
-which just echoes a string back to us (with parameters from the files
-read with -f filled in) instead of running curl.
+Look at that file and get the token:
 
-    curlicue -f request_token -e \
-        'https://api.twitter.com/oauth/authorize?oauth_token=$oauth_token'
+    tr '&' '\n' < request_token | grep ^oauth_token=
 
-Visiting this URL in our browser and selecting "Allow" will give us a
-PIN, which we can in turn use to obtain an access token:
+Then load this URL in your browser (replacing the token value with what
+was returned above):
 
-    curlicue -f consumer -f request_token -p 'oauth_verifier=PIN' -- \
+    https://api.twitter.com/oauth/authorize?oauth_token=THAT_TOKEN
+
+Visiting this URL in our browser and approving access for the app will
+give us a PIN, which we can in turn use to obtain an access token:
+
+    curlicue -f consumer -f request_token -p 'oauth_verifier=THAT_PIN' -- \
         -X POST https://api.twitter.com/oauth/access_token > access_token
 
 Note that we need to read in both the consumer and token information
@@ -127,7 +138,7 @@ can be omitted.
 Finally, to make our command line shorter, we can concatenate the
 consumer and token into one file:
 
-   paste -d '&' consumer access_token > credentials
+    paste -d '&' consumer access_token > credentials
 
 And remove all the intermediate files (consumer, request_token, and
 access_token).

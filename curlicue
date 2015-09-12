@@ -95,21 +95,47 @@ method=GET
 oauth_timestamp="$(date +%s)"
 oauth_nonce="$(openssl rand -base64 12)"
 
-while getopts 'e:f:Pp:vu' opt; do
+while getopts 'F:K:S:R:A:T:f:Pp:vu' opt; do
     case "$opt" in
-        e) eval "echo \"$OPTARG\""; exit 0;;
+        # Options for first-time setup
+        F) new_cred_file="$OPTARG";;
+        K) consumer_key="$OPTARG";;
+        S) consumer_secret="$OPTARG";;
+        R) request_token_url="$OPTARG";;
+        A) authorize_url="$OPTARG";;
+        T) access_token_url="$OPTARG";;
+        # Options for normal operation
         f) load_cred_file "$OPTARG"; loaded=1;;
         P) data_is_not_params=1;;
         p) extra_params="$OPTARG";;
         v) verbose=1;;
-        u) encode_only=1;;
         *) echo "Unknown option: $opt"; exit 2;;
     esac
 done; shift $(($OPTIND-1))
 
-if test -n "$encode_only"; then
-    curl_encode "$@"
-    exit 0
+if test -n "$new_cred_file"; then
+    test -n "$consumer_key" || read -p 'Consumer Key: ' consumer_key
+    test -n "$consumer_secret" || read -p 'Consumer Secret: ' consumer_secret
+    test -n "$request_token_url" || read -p 'Request Token URL: ' request_token_url
+    test -n "$authorize_url" || read -p 'Authorize URL: ' authorize_url
+    test -n "$access_token_url" || read -p 'Access Token URL: ' request_token_url
+
+    consumer_tmp=$(mktemp -t curlicue_consumer.XXXXXX)
+    request_token_tmp=$(mktemp -t curlicue_request_token.XXXXXX)
+    access_token_tmp=$(mktemp -t curlicue_access_token.XXXXXX)
+
+    # TODO: we should be able to do the remaining calls in-process now
+    curl_encode "oauth_consumer_key=$consumer_key" "oauth_consumer_secret=$consumer_secret" > "$consumer_tmp"
+    load_cred_file "$consumer_tmp"
+    curlicue -f "$consumer_tmp" -p 'oauth_callback=oob' -- -s -X POST "$request_token_url" > "$request_token_tmp"
+    load_cred_file "$request_token_tmp"
+    echo "OK, load this URL: $(eval "echo \"$authorize_url\"")"
+    read -p 'PIN: ' pin
+    curlicue -f "$consumer_tmp" -f "$request_token_tmp" ${pin:+-p "oauth_verifier=$pin"} -- -s -X POST "$access_token_url" > "$access_token_tmp"
+    paste -d '&' "$consumer_tmp" "$access_token_tmp" > "$new_cred_file"
+    echo "Wrote $new_cred_file"
+    rm -f "$consumer_tmp" "$request_token_tmp" "$access_token_tmp"
+    exit
 fi
 
 # The remaining args in $@ go directly to curl. Fools that we are, we
