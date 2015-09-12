@@ -7,10 +7,7 @@ services.
 Twitter
 -------
 
-This is for authenticating as your own app (generating a personalized
-Curlicue consumer key with the "open source" key exchange mechanism has
-been delayed indefinitely, so I have removed the separate setup script
-for it).
+Create your own application at https://apps.twitter.com/ first.
 
     curlicue-setup \
         'https://api.twitter.com/oauth/request_token' \
@@ -19,8 +16,17 @@ for it).
         credentials
 
     curlicue -f credentials \
-        'https://api.twitter.com/1/statuses/home_timeline.xml'
+        'https://api.twitter.com/1.1/statuses/home_timeline.json'
 
+Historical note: when I initially wrote Curlicue, there was talk of an
+"open source" key creation mechanism, where I could distribute a master
+key with Curlicue's code that would somehow allow you to automatically
+create your own key and secret, but that never happened[1]. You can look
+in the repository's history for a tentative version of how it might have
+looked.
+
+[1] Infamously, Twitter decided they didn't want new third-party clients:
+https://groups.google.com/forum/#!topic/twitter-development-talk/yCzVnHqHIWo
 
 Google
 ------

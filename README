@@ -76,11 +76,10 @@ do with Curlicue:
 Walkthrough
 -----------
 
-To demonstrate the authentication process in detail, let's work through
-what happens when you run curlicue-setup with Twitter as a previously
-registered application. Before creating any files (which will all
-contain secrets), we should set our umask so that no one else can read
-them:
+To demonstrate the authentication process in detail, let's walk through
+what happens when you setup curlicue with a Twitter application. Before
+creating any files (which will all contain secrets), we should set our
+umask so that no one else can read them:
 
     umask 077
 
@@ -118,7 +117,7 @@ Note that we need to read in both the consumer and token information
 from here on. Now we can actually make an interesting request:
 
     curlicue -f consumer -f access_token \
-        https://api.twitter.com/1/statuses/home_timeline.xml
+        https://api.twitter.com/1.1/statuses/home_timeline.json
 
 In this case, we are not passing any options along to curl, so the --
 can be omitted.
