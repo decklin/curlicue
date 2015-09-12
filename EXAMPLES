@@ -63,24 +63,6 @@ application I chose Delicious.
     curlicue -f credentials \
         'http://api.del.icio.us/v2/posts/recent'
 
-Netflix
--------
-
-Note that there is no PIN returned (just hit Enter); they appear to be
-using OAuth 1.0, since exchanging the request token for an access token
-works anyway.
-
-Unlike the others, the token exchange is done over insecure HTTP.
-
-    curlicue-setup \
-        'http://api.netflix.com/oauth/request_token' \
-        'https://api-user.netflix.com/oauth/login?application_name=$application_name&oauth_consumer_key=$oauth_consumer_key&oauth_token=$oauth_token' \
-        'http://api.netflix.com/oauth/access_token' \
-        credentials
-
-    curlicue -f credentials \
-        'http://api.netflix.com/catalog/titles'
-
 TripIt
 ------
 
