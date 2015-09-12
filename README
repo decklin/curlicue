@@ -32,13 +32,12 @@ POST data as parameters.
 Installation
 ------------
 
-Curlicue is now split up into several scripts, so you will need to
-install at least curlicue and curl-encode to a directory in your PATH.
-This can be done with:
+Copy the curlicue script to somewhere in your PATH. For example:
 
-    install curlicue curl-encode /usr/local/bin
+    install curlicue /usr/local/bin
 
-You may also want to include curlicue-setup and the scripts in contrib.
+You may also want to include curlicue-setup and the scripts in contrib,
+but once curlicue is in your PATH, they can be run from anywhere.
 
 Setup
 -----

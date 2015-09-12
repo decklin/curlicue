@@ -19,7 +19,7 @@ trap "rm -f '$consumer_tmp' '$request_token_tmp' '$access_token_tmp'" EXIT
 
 read -p 'Consumer key: ' key
 read -p 'Consumer secret: ' secret
-curl-encode "oauth_consumer_key=$key" "oauth_consumer_secret=$secret" > "$consumer_tmp"
+curlicue -u "oauth_consumer_key=$key" "oauth_consumer_secret=$secret" > "$consumer_tmp"
 
 curlicue -f "$consumer_tmp" -p 'oauth_callback=oob' -- \
     -s -X POST "$request_token_url" > "$request_token_tmp"

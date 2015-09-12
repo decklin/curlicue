@@ -49,17 +49,30 @@ join_params() {
     paste -s -d "$1" -
 }
 
+# Use curl's --data-urlencode to URL-encode one or more arguments. See
+# the curl manual for a full description of the syntax of this option
+# (in short: prepend a = to any arg that isn't a key=value URL param).
+# Encoded args will be separated by & in the output.
+
+encode_arg() {
+    curl -s -w '%{url_effective}' --data-urlencode "$1" -G / | cut -c 3-
+}
+
+curl_encode() {
+    for i; do encode_arg "$i"; done | join_params '&'
+}
+
 # The timestamp/nonce are generated in this script, so they need to be
 # URL-encoded. The key/token are read in from already URL-encoded files,
 # so they should *not* be encoded again. This, along with the sort,
-# means we cannot factor out the call to curl-encode.
+# means we cannot factor out the call to curl_encode.
 
 mk_params() {
     for i in \
-        oauth_version="$(curl-encode "=1.0")" \
-        oauth_signature_method="$(curl-encode "=HMAC-SHA1")" \
-        oauth_timestamp="$(curl-encode "=$oauth_timestamp")" \
-        oauth_nonce="$(curl-encode "=$oauth_nonce")" \
+        oauth_version="$(curl_encode "=1.0")" \
+        oauth_signature_method="$(curl_encode "=HMAC-SHA1")" \
+        oauth_timestamp="$(curl_encode "=$oauth_timestamp")" \
+        oauth_nonce="$(curl_encode "=$oauth_nonce")" \
         oauth_consumer_key="$oauth_consumer_key" \
         ${oauth_token:+oauth_token="$oauth_token"} \
         $(foreach_query_pair echo_pair "$extra_params") \
@@ -82,16 +95,22 @@ method=GET
 oauth_timestamp="$(date +%s)"
 oauth_nonce="$(openssl rand -base64 12)"
 
-while getopts 'e:f:Pp:vu:' opt; do
+while getopts 'e:f:Pp:vu' opt; do
     case "$opt" in
         e) eval "echo \"$OPTARG\""; exit 0;;
         f) load_cred_file "$OPTARG"; loaded=1;;
         P) data_is_not_params=1;;
         p) extra_params="$OPTARG";;
         v) verbose=1;;
+        u) encode_only=1;;
         *) echo "Unknown option: $opt"; exit 2;;
     esac
 done; shift $(($OPTIND-1))
+
+if test -n "$encode_only"; then
+    curl_encode "$@"
+    exit 0
+fi
 
 # The remaining args in $@ go directly to curl. Fools that we are, we
 # attempt to parse them here. Only one URL is supported.
@@ -123,10 +142,10 @@ fi
 # This is where the magic happens.
 
 params="$(mk_params "$url_params" | join_params '&')"
-base_string="$(curl-encode "=$method" "=$url" "=$params")"
+base_string="$(curl_encode "=$method" "=$url" "=$params")"
 signing_key="$oauth_consumer_secret&$oauth_token_secret"
 oauth_signature="$(hmac_sha1 "$signing_key" "$base_string")"
-sig_params="$(curl-encode "oauth_signature=$oauth_signature")"
+sig_params="$(curl_encode "oauth_signature=$oauth_signature")"
 auth_header="$(mk_params "$sig_params" | quote_vals | join_params ',')"
 
 if test -n "$verbose"; then
