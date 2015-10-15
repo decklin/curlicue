@@ -98,11 +98,11 @@ done; shift $(($OPTIND-1))
 
 for i; do
     case "$prev" in
-        -d|--data) test -z "$data_is_not_params" && url_params="$i";;
+        -d|--data|--data-raw) test -z "$data_is_not_params" && url_params="$i";;
         -X|--request) method="$i";;
     esac
     case "$i" in
-        -d|--data) method=POST;;
+        -d|--data|--data-raw) method=POST;;
         http*\?*) url="${i%%\?*}"; url_params="${i#*\?}";;
         http*) url="$i";;
     esac
