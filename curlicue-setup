@@ -15,6 +15,7 @@ fi
 consumer_tmp=$(mktemp -t curlicue_consumer.XXXXXX)
 request_token_tmp=$(mktemp -t curlicue_request_token.XXXXXX)
 access_token_tmp=$(mktemp -t curlicue_access_token.XXXXXX)
+trap "rm -f '$consumer_tmp' '$request_token_tmp' '$access_token_tmp'" EXIT
 
 read -p 'Consumer key: ' key
 read -p 'Consumer secret: ' secret
