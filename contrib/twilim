@@ -1,0 +1,27 @@
+#!/bin/sh
+
+all='false'
+while getopts 'af:r:' opt; do
+    case "$opt" in
+        a) all='true';;
+        f) creds="$OPTARG";;
+        r) resource="${OPTARG#/}";;
+        *) echo "Unknown option: $opt"; exit 2;;
+    esac
+done; shift $(($OPTIND-1))
+
+display() {
+    if test -n "$resource"; then
+        jq --arg resource "/$resource" -r '.resources | add | .[$resource] | .remaining'
+    else
+        jq --argjson now "$(date +%s)" --argjson all "$all" \
+            -r '.resources | add | to_entries | .[] |
+                  if ($all or .value.remaining < .value.limit) then
+                    "\(.value.remaining)\t\(.value.limit)\t\(.value.reset - $now)\t\(.key)"
+                  else
+                    empty
+                  end'
+    fi
+}
+
+twij ${creds:+-f "$creds"} /application/rate_limit_status | display
