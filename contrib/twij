@@ -104,7 +104,8 @@ url="$api_root/$resource.json"
 
 head_temp="$(mktemp -t twij-head.XXXXXX)"
 body_temp="$(mktemp -t twij-body.XXXXXX)"
-trap "rm -f '$head_temp' '$body_temp'; exit" INT TERM EXIT
+cleanup() { rm -f "$head_temp" "$body_temp"; }
+trap 'exit $?' HUP INT QUIT TERM; trap cleanup EXIT
 
 test -n "$state_file" && read remaining reset < "$state_file"
 
