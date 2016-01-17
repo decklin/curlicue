@@ -78,6 +78,9 @@ while getopts 'c:f:m:ps:t:vx' opt; do
     esac
 done; shift $(($OPTIND-1))
 
+# We might call date many times, so figure out which flavor we have now
+date --version >/dev/null 2>&1 && gnu_date=1
+
 # We try to only output JSON to stdout, so use these for messages
 log() { printf "$@" 1>&2; }
 vlog() { test -n "$verbose" && log "$@"; }
@@ -86,16 +89,32 @@ curlicue_write_temp() {
     curlicue ${creds:+-f "$creds"} -- -D "$head_temp" -o "$body_temp" -m "$time_limit" -s "$@"
 }
 
+fmt_time() {
+    local fmt="$1"; shift
+    local t="$1"; shift
+    if test -n "$gnu_date"; then
+        date -d "@$t" "+$fmt"
+    else
+        date -j -f '%s' "$t" "+$fmt"
+    fi
+}
+
 sleep_until() {
     if test -n "$exit_on_limit"; then
         test -z "$verbose" && log 'twij: '
         log '%s\n' "aborting${cursor:+ at cursor: $cursor}"
         exit 3
     fi
-    delay="$(($1-$(date +%s) + 2))"
-    end_str="$(perl -MPOSIX -le 'print strftime "%X", localtime $ARGV[0]' "$reset")" # TODO: no perl
-    test "$delay" -lt 1 && delay=4 # in case a race or missing value causes a non-positive time
-    vlog "sleeping until $end_str ($delay)... "
+
+    now="$(date +%s)"
+    # if unset, sleep for 1 minute
+    target="${1:-$(($now + 60))}"
+    # add a 1 second margin just in case
+    delay="$(($target - $now + 1))"
+    # in case a race or missing value causes a non-positive time
+    test "$delay" -lt 1 && delay=60
+
+    vlog "sleeping until $(fmt_time %T "$(($now + $delay))") ($(($delay / 60))m$(($delay % 60))s)... "
     sleep "$delay"
 }
 
