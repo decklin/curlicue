@@ -85,8 +85,19 @@ date --version >/dev/null 2>&1 && gnu_date=1
 log() { printf "$@" 1>&2; }
 vlog() { test -n "$verbose" && log "$@"; }
 
-curlicue_write_temp() {
+run_curlicue() {
     curlicue ${creds:+-f "$creds"} -- -D "$head_temp" -o "$body_temp" -m "$time_limit" -s "$@"
+}
+
+curlicue_write_temp() {
+    local params="$1"; shift
+    local url="$api_root/$resource.json"
+
+    vlog '%s\n' "$method $resource${params:+?$params}"
+    case "$method" in
+        GET) run_curlicue "$url${params:+?$params}";;
+        POST) run_curlicue -d "$params" "$url";;
+    esac
 }
 
 fmt_time() {
@@ -127,7 +138,6 @@ extract_header() {
 }
 
 resource="${1#/}"; shift
-url="$api_root/$resource.json"
 
 head_temp="$(mktemp -t twij-head.XXXXXX)"
 body_temp="$(mktemp -t twij-body.XXXXXX)"
@@ -150,17 +160,15 @@ while test "$cursor" != '0'; do
         fi
     fi
 
-    params="$(curl-encode "$@" ${cursor:+"cursor=$cursor"})"
-    vlog '%s\n' "$method $resource${params:+?$params}"
-    case "$method" in
-        GET) curlicue_write_temp "$url${params:+?$params}";;
-        POST) curlicue_write_temp -d "$params" "$url";;
-    esac
+    if curlicue_write_temp "$(curl-encode "$@" ${cursor:+"cursor=$cursor"})"; then
+        # if curlicue succeeded, head and body temp files are now written
+        remaining="$(extract_header x-rate-limit-remaining)"
+        limit="$(extract_header x-rate-limit-limit)"
+        reset="$(extract_header x-rate-limit-reset)"
+    else
+        exit 1
+    fi
 
-    # if curlicue succeeded, head and body temp files are now written
-    remaining="$(extract_header x-rate-limit-remaining)"
-    limit="$(extract_header x-rate-limit-limit)"
-    reset="$(extract_header x-rate-limit-reset)"
     # save now, in case we abort
     test -n "$state_file" && echo "$remaining $reset" > "$state_file"
 
