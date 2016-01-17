@@ -62,12 +62,16 @@
 api_root='https://api.twitter.com/1.1'
 test -n "$TWIJ_CREDS" && creds="$TWIJ_CREDS"
 method=GET
-while getopts 'c:f:ps:vx' opt; do
+time_limit=60
+
+while getopts 'c:f:m:ps:t:vx' opt; do
     case "$opt" in
         c) cursor="$OPTARG";;
         f) creds="$OPTARG";;
+        m) max_pages="$OPTARG";;
         p) method=POST;;
         s) state_file="$OPTARG";;
+        t) time_limit="$OPTARG";;
         x) exit_on_limit=1;;
         v) verbose=1;;
         *) echo "Unknown option: $opt" 1>&2; exit 2;;
@@ -79,7 +83,7 @@ log() { printf "$@" 1>&2; }
 vlog() { test -n "$verbose" && log "$@"; }
 
 curlicue_write_temp() {
-    curlicue ${creds:+-f "$creds"} -- -D "$head_temp" -o "$body_temp" -s "$@"
+    curlicue ${creds:+-f "$creds"} -- -D "$head_temp" -o "$body_temp" -m "$time_limit" -s "$@"
 }
 
 sleep_until() {
@@ -104,7 +108,10 @@ trap "rm -f '$head_temp' '$body_temp'; exit" INT TERM EXIT
 
 test -n "$state_file" && read remaining reset < "$state_file"
 
+page=0
 while test "$cursor" != '0'; do
+    test -n "$max_pages" && test "$page" -ge "$max_pages" && break
+
     vlog 'twij: '
     if test -n "$remaining"; then
         if test "$remaining" -eq 0; then
@@ -143,4 +150,6 @@ while test "$cursor" != '0'; do
         # 0 means done, so just default to 0 for non-cursored objects and non-cursorable arrays
         cursor="$(jq -r '.next_cursor_str? // 0' < "$body_temp")"
     fi
+
+    page="$(($page + 1))"
 done
