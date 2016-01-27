@@ -118,6 +118,14 @@ sleep_until() {
     sleep "$delay"
 }
 
+extract_header() {
+    tr -d '\r' < "$head_temp" | while read h v; do
+        case $h in
+            "$1":) echo "$v";;
+        esac
+    done
+}
+
 resource="${1#/}"; shift
 url="$api_root/$resource.json"
 
@@ -149,10 +157,10 @@ while test "$cursor" != '0'; do
         POST) curlicue_write_temp -d "$params" "$url";;
     esac
 
-    # extract rate limit info from headers (TODO: make not horrible)
-    remaining="$(tr -d '\r' < "$head_temp" | awk '$1 == "x-rate-limit-remaining:" { print $2 }')"
-    limit="$(tr -d '\r' < "$head_temp" | awk '$1 == "x-rate-limit-limit:" { print $2 }')"
-    reset="$(tr -d '\r' < "$head_temp" | awk '$1 == "x-rate-limit-reset:" { print $2 }')"
+    # if curlicue succeeded, head and body temp files are now written
+    remaining="$(extract_header x-rate-limit-remaining)"
+    limit="$(extract_header x-rate-limit-limit)"
+    reset="$(extract_header x-rate-limit-reset)"
     # save now, in case we abort
     test -n "$state_file" && echo "$remaining $reset" > "$state_file"
 
