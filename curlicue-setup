@@ -22,13 +22,13 @@ read -p 'Consumer secret: ' secret
 curl-encode "oauth_consumer_key=$key" "oauth_consumer_secret=$secret" > "$consumer_tmp"
 
 curlicue -f "$consumer_tmp" -p 'oauth_callback=oob' -- \
-    -s -X POST "$request_token_url" > "$request_token_tmp"
+    -s -X ${CURLICUE_REQUEST_TOKEN_METHOD:-POST} "$request_token_url" > "$request_token_tmp"
 
 echo "Load this URL: $(curlicue -f "$consumer_tmp" -f "$request_token_tmp" -e "$authorize_url")"
 read -p 'Paste the PIN you got here: ' pin
 
 curlicue -f "$consumer_tmp" -f "$request_token_tmp" ${pin:+-p "oauth_verifier=$pin"} -- \
-    -s -X POST "$access_token_url" > "$access_token_tmp"
+    -s -X ${CURLICUE_ACCESS_TOKEN_METHOD:-POST} "$access_token_url" > "$access_token_tmp"
 
 paste -d '&' "$consumer_tmp" "$access_token_tmp" > "$output_creds"
 echo "OK! Now you can run: curlicue -f $output_creds [-- CURL_OPTS] URL"
