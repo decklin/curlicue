@@ -54,6 +54,15 @@ look something like:
         'https://oauth.provider/access_token' \
         credentials
 
+The default HTTP method used for the request_token and access_token URLs
+is POST.  If you want to change that, set environment variables
+CURLICUE_REQUEST_TOKEN_METHOD and/or CURLICUE_ACCESS_TOKEN_METHOD,
+respectively, before you run curlicue-setup.  For example,
+    
+    export CURLICUE_REQUEST_TOKEN_METHOD=GET
+    export CURLICUE_ACCESS_TOKEN_METHOD=GET
+    # run curlicue-setup command as shown above
+
 In the user authorization URL (only), variables from the consumer
 information or request token can be interpolated using shell syntax.
 Your provider may need additional URL parameters for one or more of the
