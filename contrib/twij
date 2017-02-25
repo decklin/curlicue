@@ -48,11 +48,16 @@
 #
 #   -p: Make a POST request (default is GET).
 #
-#   -v: Verbose (log what we're doing to stderr).
+#   -v: Verbose (log more of what we're doing to stderr, not just errors).
 #
 #   -s PATH: Persist rate-limit state in this file.
 #
 #   -c CURSOR: Specify a cursor to resume at.
+#
+#   -m MAX: fetch no more than MAX pages of a cursored response.
+#
+#   -t TIMEOUT: Total timeout to pass along through curlicue to curl
+#               (curl's --max-time option). Defaults to 60.
 #
 #   -x: Abort (with exit code 3) if a request would be rate-limited.
 #
