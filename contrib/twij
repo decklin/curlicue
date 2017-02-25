@@ -59,7 +59,16 @@
 #   -t TIMEOUT: Total timeout to pass along through curlicue to curl
 #               (curl's --max-time option). Defaults to 60.
 #
+#   -d FALLBACK: Minimum time to sleep in case of an error processing
+#                rate limit status from an earlier response.
+#
+#   -T LONGEST: Maxiumum time to sleep due to rate limiting. Defaults to
+#               900, the length of a Twitter rate-limit window.
+#
 #   -x: Abort (with exit code 3) if a request would be rate-limited.
+#
+#   -X: Abort (with exit code 4) if a delay would be greater than the
+#       maximum specified by -T.
 #
 # Copyright © 2015 Decklin Foster <decklin@red-bean.com>; distributed
 # under the same license as Curlicue.
@@ -68,16 +77,21 @@ api_root='https://api.twitter.com/1.1'
 test -n "$TWIJ_CREDS" && creds="$TWIJ_CREDS"
 method=GET
 time_limit=60
+delay_fallback=30
+delay_limit=900
 
-while getopts 'c:f:m:ps:t:vx' opt; do
+while getopts 'c:d:f:m:ps:t:T:vw:xX' opt; do
     case "$opt" in
         c) cursor="$OPTARG";;
+        d) delay_fallback="$OPTARG";;
         f) creds="$OPTARG";;
         m) max_pages="$OPTARG";;
         p) method=POST;;
         s) state_file="$OPTARG";;
         t) time_limit="$OPTARG";;
+        T) delay_limit="$OPTARG";;
         x) exit_on_limit=1;;
+        X) exit_on_delay=1;;
         v) verbose=1;;
         *) echo "Unknown option: $opt" 1>&2; exit 2;;
     esac
@@ -124,12 +138,22 @@ sleep_until() {
 
     now="$(date +%s)"
 
-    # if unset, sleep for 1 minute
-    target="${1:-$(($now + 60))}"
+    # if somehow unset or not passed, use fallback time
+    target="${1:-$(($now + $delay_fallback))}"
     # add a 1 second margin just in case
     delay="$(($target - $now + 1))"
     # in case a race or missing value causes a non-positive time
-    test "$delay" -lt 1 && delay=60
+    if test "$delay" -lt 1; then
+        delay="$delay_fallback"
+    elif test "$delay" -gt "$delay_limit"; then
+        # delay is over maximum, bail or clamp it to max
+        if test -n "$exit_on_delay"; then
+            elog '%s\n' "bailing instead of sleeping for $delay (more than $delay_limit)."
+            exit 4
+        else
+            delay="$delay_limit"
+        fi
+    fi
 
     vlog '%s... ' "sleeping until $(fmt_time %T "$(($now + $delay))") ($(($delay / 60))m$(($delay % 60))s)"
     sleep "$delay"
