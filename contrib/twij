@@ -87,8 +87,9 @@ done; shift $(($OPTIND-1))
 date --version >/dev/null 2>&1 && gnu_date=1
 
 # We try to only output JSON to stdout, so use these for messages
-log() { printf "$@" 1>&2; }
-vlog() { test -n "$verbose" && log "$@"; }
+prog=$(basename "$0")
+elog() { printf "$@" 1>&2; }
+vlog() { test -n "$verbose" && elog "$@"; }
 
 run_curlicue() {
     curlicue ${creds:+-f "$creds"} -- -D "$head_temp" -o "$body_temp" -m "$time_limit" -s "$@"
@@ -117,12 +118,12 @@ fmt_time() {
 
 sleep_until() {
     if test -n "$exit_on_limit"; then
-        test -z "$verbose" && log 'twij: '
-        log '%s\n' "aborting${cursor:+ at cursor: $cursor}"
+        elog '%s\n' "aborting${cursor:+ at cursor: $cursor}."
         exit 3
     fi
 
     now="$(date +%s)"
+
     # if unset, sleep for 1 minute
     target="${1:-$(($now + 60))}"
     # add a 1 second margin just in case
@@ -130,7 +131,7 @@ sleep_until() {
     # in case a race or missing value causes a non-positive time
     test "$delay" -lt 1 && delay=60
 
-    vlog "sleeping until $(fmt_time %T "$(($now + $delay))") ($(($delay / 60))m$(($delay % 60))s)... "
+    vlog '%s... ' "sleeping until $(fmt_time %T "$(($now + $delay))") ($(($delay / 60))m$(($delay % 60))s)"
     sleep "$delay"
 }
 
@@ -155,13 +156,12 @@ page=0
 while test "$cursor" != '0'; do
     test -n "$max_pages" && test "$page" -ge "$max_pages" && break
 
-    vlog 'twij: '
     if test -n "$remaining"; then
         if test "$remaining" -eq 0; then
-            vlog 'exhausted; '
+            vlog '%s; ' "$prog: exhausted"
             sleep_until "$reset"
         else
-            vlog "$remaining left; "
+            vlog '%s; ' "$prog: $remaining left"
         fi
     fi
 
@@ -180,7 +180,7 @@ while test "$cursor" != '0'; do
     # only eat the response if it's a rate limit error (code 88)... diff errors should pass thru
     # assuming here that a rate limit error is always returned alone
     if test "$(jq -r '.errors?[0].code' < "$body_temp")" = '88'; then
-        vlog 'rate limit exceeded! '
+        elog '%s! ' "$prog: rate limit exceeded"
         sleep_until "$reset"
         # this will have happened while we were waiting
         remaining="$limit"
