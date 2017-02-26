@@ -130,6 +130,8 @@ time_limit=60
 delay_fallback=30
 delay_limit=900
 
+case $* in --help) exec sed '1,2d;/^$/,$d;s/^#/ /' "$0"; esac
+
 while getopts 'c:d:f:m:ps:t:T:vw:xX' opt; do
     case "$opt" in
         c) cursor="$OPTARG";;
