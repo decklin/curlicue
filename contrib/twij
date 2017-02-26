@@ -2,9 +2,9 @@
 
 # twij - get anything from the Twitter API (v1.1) with Curlicue
 #
-# Usage:
+# Usage (the simplified version):
 #
-#   twij [OPTIONS] RESOURCE [PARAMS...] | jq [OPTIONS]
+#     twij [OPTIONS] RESOURCE [PARAMS...] | jq .
 #
 # This is a little wrapper around Curlicue that does some helpful things
 # for you:
@@ -17,30 +17,23 @@
 #
 #   - Detects cursored resources and automatically fetches them with
 #     multiple requests. These resources will be output as multiple JSON
-#     documents, which is generally fine for being consumed by jq.
+#     documents, one per line (not an official thing as far as I know,
+#     but someone came up with http://jsonlines.org/; so I'm saying it's
+#     that), which can be consumed by jq without any additional
+#     considerations.
 #
-#   - Handles rate limiting by saving response headers (these are
+#   - Handles rate limiting by saving response headers, which are
 #     frequently more accurate than the /application/rate_limit_status
-#     resource, which is also itself rate-limited(!)). By default, when
-#     a rate limit window is used up, the script sleeps, but you can
-#     also have it exit immediately (and you can resume from the
-#     last-seen cursor later). For batch runs, the rate limit state can
-#     be persisted to a file.
+#     resource, also itself rate-limited(!). By default, when a rate
+#     limit window is used up, the script sleeps, but you can also have
+#     it exit immediately (and you can resume from the last-seen cursor
+#     later), or give up if that would would be too long. You can also
+#     insist on trying again a little bit sooner (in practice, the rate
+#     limit service is free to evict data any time it wants, and may
+#     hand you a new window), but obviously, don't abuse this.
 #
-# Dependencies:
-#
-#   - jq (at least version 1.5, for try/catch)
-#
-# Examples:
-#
-#     # Read the latest tweets in your home timeline, formatted
-#     twij /statuses/home_timeline | jq -r '.[] | "<\(.user.screen_name)> \(.text)"'
-#
-#     # List the names of all accounts @twitterapi is following (all in one request)
-#     twij /friends/list screen_name=twitterapi count=200 | jq -r '.users[].screen_name'
-#
-#     # Do the same, but inefficiently, with verbose logging of the multiple requests
-#     twij -v /friends/list screen_name=twitterapi | jq -r '.users[].screen_name'
+# For batch runs, the rate limit state can be persisted to a file.
+# You'll want to decide to do this before starting.
 #
 # Options:
 #
@@ -70,7 +63,64 @@
 #   -X: Abort (with exit code 4) if a delay would be greater than the
 #       maximum specified by -T.
 #
-# Copyright © 2015 Decklin Foster <decklin@red-bean.com>; distributed
+# Examples:
+#
+# This first set is overly simplified, but will give you a feel for what
+# you can do.
+#
+#     # Read the latest tweets in your home timeline, formatted
+#     twij /statuses/home_timeline | jq -r '.[] | "<\(.user.screen_name)> \(.text)"'
+#
+#     # List the names of all accounts @twitterapi is following (all in one request)
+#     twij /friends/list screen_name=twitterapi count=200 | jq -r '.users[].screen_name'
+#
+#     # Do the same, but inefficiently, with verbose logging of the multiple requests
+#     twij -v /friends/list screen_name=twitterapi | jq -r '.users[].screen_name'
+#
+# In practice, you want to be able to handle and recover from errors
+# (see the next section) -- here's the same inefficient version, but but
+# we'll know when our rate limit is used up:
+#
+#     if twij -v -x /friends/list screen_name=twitterapi > temp.jsonl; then
+#         jq -r '.users[].screen_name' temp.jsonl
+#     fi
+#
+# Or, to only give up if the next rate limit window is more than 5 minutes away:
+#
+#     if twij -v -T 300 -X /friends/list screen_name=twitterapi > temp.jsonl; then
+#         jq -r '.users[].screen_name' temp.jsonl
+#     fi
+#
+# Caveat:
+#
+# The simple example we start out with pipes twij into jq, which looks
+# easy, and is probably good enough for one-off tasks, but if you are
+# doing anything that might hit a rate limit, it's a dangerous idea.
+#
+# Shell pipes, unless you use ksh/bash's `set -o pipefail` option,
+# discard the exit status of all commands but the last, giving you, in
+# this case, the exit status of jq, which is always going to be success.
+# If you need to know about curlicue or rate-limiting failures, write
+# your output to a temporary file. I suggest ".jsonl" for the extension
+# since it'll help you remember that while a streaming tool like jq can
+# process that file as is, if you're in your favorite scripting
+# language, you'll need to split it on "\n" and load it as several JSON
+# documents, then merge them.
+#
+# Alternatively, if you're OK with throwing away the cursor information
+# from the output (it's no longer valid, anyway), you could do something
+# like this (for the preceding example) to postprocess it into a single
+# JSON document containing an array:
+#
+#     jq --slurp 'reduce .[] as $page ([]; . + $page.users)' temp.jsonl > users.json
+#
+# Dependencies:
+#
+#   - jq (at least version 1.5, for try/catch)
+#
+# License:
+#
+# Copyright © 2015-2017 Decklin Foster <decklin@red-bean.com>; distributed
 # under the same license as Curlicue.
 
 api_root='https://api.twitter.com/1.1'
