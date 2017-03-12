@@ -1,0 +1,284 @@
+#!/bin/sh
+
+# twij - get anything from the Twitter API (v1.1) with Curlicue
+#
+# Usage (the simplified version):
+#
+#     twij [OPTIONS] RESOURCE [PARAMS...] | jq .
+#
+# This is a little wrapper around Curlicue that does some helpful things
+# for you:
+#
+#   - Builds URLs from a resource (like "/statuses/mentions_timeline"...
+#     you don't need the beginning of the URL or the .json extension)
+#     and parameters which are specified as individual arguments
+#     (escaped and joined for you, so you can write scripts that build
+#     up parameters in $@).
+#
+#   - Detects cursored resources and automatically fetches them with
+#     multiple requests. These resources will be output as multiple JSON
+#     documents, one per line (not an official thing as far as I know,
+#     but someone came up with http://jsonlines.org/; so I'm saying it's
+#     that), which can be consumed by jq without any additional
+#     considerations.
+#
+#   - Handles rate limiting by saving response headers, which are
+#     frequently more accurate than the /application/rate_limit_status
+#     resource, also itself rate-limited(!). By default, when a rate
+#     limit window is used up, the script sleeps, but you can also have
+#     it exit immediately (and you can resume from the last-seen cursor
+#     later), or give up if that would would be too long. You can also
+#     insist on trying again a little bit sooner (in practice, the rate
+#     limit service is free to evict data any time it wants, and may
+#     hand you a new window), but obviously, don't abuse this.
+#
+# For batch runs, the rate limit state can be persisted to a file.
+# You'll want to decide to do this before starting.
+#
+# Dependencies:
+#
+#   - jq (at least version 1.5, for try/catch)
+#
+# Options:
+#
+#   -f PATH: Credentials file; passed along to Curlicue.
+#
+#   -p: Make a POST request (default is GET).
+#
+#   -v: Verbose (log more of what we're doing to stderr, not just errors).
+#
+#   -s PATH: Persist rate-limit state in this file.
+#
+#   -c CURSOR: Specify a cursor to resume at.
+#
+#   -m MAX: fetch no more than MAX pages of a cursored response.
+#
+#   -t TIMEOUT: Total timeout to pass along through curlicue to curl
+#               (curl's --max-time option). Defaults to 60.
+#
+#   -d FALLBACK: Minimum time to sleep in case of an error processing
+#                rate limit status from an earlier response.
+#
+#   -T LONGEST: Maxiumum time to sleep due to rate limiting. Defaults to
+#               900, the length of a Twitter rate-limit window.
+#
+#   -x: Abort (with exit code 3) if a request would be rate-limited.
+#
+#   -X: Abort (with exit code 4) if a delay would be greater than the
+#       maximum specified by -T.
+#
+# Examples:
+#
+# This first set is overly simplified, but will give you a feel for what
+# you can do.
+#
+#     # Read the latest tweets in your home timeline, formatted
+#     twij /statuses/home_timeline | jq -r '.[] | "<\(.user.screen_name)> \(.text)"'
+#
+#     # List the names of all accounts @twitterapi is following (all in one request)
+#     twij /friends/list screen_name=twitterapi count=200 | jq -r '.users[].screen_name'
+#
+#     # Do the same, but inefficiently, with verbose logging of the multiple requests
+#     twij -v /friends/list screen_name=twitterapi | jq -r '.users[].screen_name'
+#
+# Advanced Examples:
+#
+# The simple examples we start out with pipe twij into jq, which looks
+# nice, and is probably good enough for one-off/fire-and-forget tasks,
+# but gives you much less control over what to do when your rate limit
+# is used up. If you run those commands too many times in succession,
+# they'll sleep for up to an entire 15-minute rate limit window, which
+# may not be what you expect.
+#
+# For more complicated or larger-scale usage, want to be able to handle
+# and recover from errors -- here's the last example again, but adjusted
+# to use -x or -X that we'll know when our rate limit is used up:
+#
+#     if twij -v -x /friends/list screen_name=twitterapi > temp.jsonl; then
+#         jq -r '.users[].screen_name' temp.jsonl
+#     fi
+#         echo "instead of sleeping for an entire window, i give up"
+#     fi
+#
+# To only give up when the next rate limit window is more than 5 minutes
+# away (that is, sleep for up to then):
+#
+#     if twij -v -T 300 -X /friends/list screen_name=twitterapi > temp.jsonl; then
+#         jq -r '.users[].screen_name' temp.jsonl
+#     fi
+#         echo "instead of sleeping for up to 5 minutes, i give up"
+#     fi
+#
+# (Obviously, you are now responsible for not looping and immediately
+# hitting your rate window again in the case of an error; check out -s
+# if you need to do anything involving a loop).
+#
+# Anyway, why do we do this? Shell pipes, unless you use ksh/bash's `set
+# -o pipefail` option, discard the exit status of all commands but the
+# last, giving you the exit status of jq (which is always going to be
+# success, because it gets a valid error document even in error cases).
+#
+# So if you need to know about curlicue or rate-limiting failures, write
+# your output to a temporary file. I suggest ".jsonl" for the extension
+# since it'll help you remember that while a streaming tool like jq can
+# process that file as is, if you're in your favorite scripting
+# language, you'll need to split it on "\n" and load it as several JSON
+# documents, then merge them. Alternatively, if you're OK with throwing
+# away the cursor information from the output (it's no longer valid,
+# anyway), you could do something like this (for the preceding example)
+# to postprocess it into a single JSON document containing an array:
+#
+#     jq --slurp 'reduce .[] as $page ([]; . + $page.users)' temp.jsonl > users.json
+#
+# License:
+#
+# Copyright © 2015-2017 Decklin Foster <decklin@red-bean.com>; distributed
+# under the same license as Curlicue.
+
+api_root='https://api.twitter.com/1.1'
+test -n "$TWIJ_CREDS" && creds="$TWIJ_CREDS"
+method=GET
+time_limit=60
+delay_fallback=30
+delay_limit=900
+
+case $* in --help) exec sed '1,2d;/^$/,$d;s/^#/ /' "$0"; esac
+
+while getopts 'c:d:f:m:ps:t:T:vw:xX' opt; do
+    case "$opt" in
+        c) cursor="$OPTARG";;
+        d) delay_fallback="$OPTARG";;
+        f) creds="$OPTARG";;
+        m) max_pages="$OPTARG";;
+        p) method=POST;;
+        s) state_file="$OPTARG";;
+        t) time_limit="$OPTARG";;
+        T) delay_limit="$OPTARG";;
+        x) exit_on_limit=1;;
+        X) exit_on_delay=1;;
+        v) verbose=1;;
+        *) echo "Unknown option: $opt" 1>&2; exit 2;;
+    esac
+done; shift $(($OPTIND-1))
+
+# We might call date many times, so figure out which flavor we have now
+date --version >/dev/null 2>&1 && gnu_date=1
+
+# We try to only output JSON to stdout, so use these for messages
+prog=$(basename "$0")
+elog() { printf "$@" 1>&2; }
+vlog() { test -n "$verbose" && elog "$@"; }
+
+run_curlicue() {
+    curlicue ${creds:+-f "$creds"} -- -D "$head_temp" -o "$body_temp" -m "$time_limit" -s "$@"
+}
+
+curlicue_write_temp() {
+    local params="$1"; shift
+    local url="$api_root/$resource.json"
+
+    vlog '%s\n' "$method $resource${params:+?$params}"
+    case "$method" in
+        GET) run_curlicue "$url${params:+?$params}";;
+        POST) run_curlicue -d "$params" "$url";;
+    esac
+}
+
+fmt_time() {
+    local fmt="$1"; shift
+    local t="$1"; shift
+    if test -n "$gnu_date"; then
+        date -d "@$t" "+$fmt"
+    else
+        date -j -f '%s' "$t" "+$fmt"
+    fi
+}
+
+sleep_until() {
+    if test -n "$exit_on_limit"; then
+        elog '%s\n' "aborting${cursor:+ at cursor: $cursor}."
+        exit 3
+    fi
+
+    now="$(date +%s)"
+
+    # if somehow unset or not passed, use fallback time
+    target="${1:-$(($now + $delay_fallback))}"
+    # add a 1 second margin just in case
+    delay="$(($target - $now + 1))"
+    # in case a race or missing value causes a non-positive time
+    if test "$delay" -lt 1; then
+        delay="$delay_fallback"
+    elif test "$delay" -gt "$delay_limit"; then
+        # delay is over maximum, bail or clamp it to max
+        if test -n "$exit_on_delay"; then
+            elog '%s\n' "bailing instead of sleeping for $delay (more than $delay_limit)."
+            exit 4
+        else
+            delay="$delay_limit"
+        fi
+    fi
+
+    vlog '%s... ' "sleeping until $(fmt_time %T "$(($now + $delay))") ($(($delay / 60))m$(($delay % 60))s)"
+    sleep "$delay"
+}
+
+extract_header() {
+    tr -d '\r' < "$head_temp" | while read h v; do
+        case $h in
+            "$1":) echo "$v";;
+        esac
+    done
+}
+
+resource="${1#/}"; shift
+
+head_temp="$(mktemp -t twij-head.XXXXXX)"
+body_temp="$(mktemp -t twij-body.XXXXXX)"
+cleanup() { rm -f "$head_temp" "$body_temp"; }
+trap 'exit $?' HUP INT QUIT TERM; trap cleanup EXIT
+
+test -n "$state_file" && read remaining reset < "$state_file"
+
+page=0
+while test "$cursor" != '0'; do
+    test -n "$max_pages" && test "$page" -ge "$max_pages" && break
+
+    if test -n "$remaining"; then
+        if test "$remaining" -eq 0; then
+            vlog '%s; ' "$prog: exhausted"
+            sleep_until "$reset"
+        else
+            vlog '%s; ' "$prog: $remaining left"
+        fi
+    fi
+
+    if curlicue_write_temp "$(curl-encode "$@" ${cursor:+"cursor=$cursor"})"; then
+        # if curlicue succeeded, head and body temp files are now written
+        remaining="$(extract_header x-rate-limit-remaining)"
+        limit="$(extract_header x-rate-limit-limit)"
+        reset="$(extract_header x-rate-limit-reset)"
+    else
+        exit 1
+    fi
+
+    # save now, in case we abort
+    test -n "$state_file" && echo "$remaining $reset" > "$state_file"
+
+    # only eat the response if it's a rate limit error (code 88)... diff errors should pass thru
+    # assuming here that a rate limit error is always returned alone
+    if test "$(jq -r '.errors?[0].code' < "$body_temp")" = '88'; then
+        elog '%s! ' "$prog: rate limit exceeded"
+        sleep_until "$reset"
+        # this will have happened while we were waiting
+        remaining="$limit"
+    else
+        cat "$body_temp"
+        # Add a newline so jq can stream
+        echo
+        # 0 means done, so just default to 0 for non-cursored objects and non-cursorable arrays
+        cursor="$(jq -r '.next_cursor_str? // 0' < "$body_temp")"
+    fi
+
+    page="$(($page + 1))"
+done

@@ -69,9 +69,12 @@ Included Scripts
 The contrib directory contains some scripts that demonstrate what you can
 do with Curlicue:
 
-   * twitpull - display data from a Twitter API endpoint as plain text,
-     using jq. Supports using cursors to fetch things that don't fit in a
-     single response.
+   * twij - get JSON data from a Twitter API endpoint, using jq.
+     Supports using cursors to fetch things that don't fit in a single
+     response.
+
+   * twilim - display the Twitter API rate limit status resource with
+     twij and jq.
 
 Walkthrough
 -----------
